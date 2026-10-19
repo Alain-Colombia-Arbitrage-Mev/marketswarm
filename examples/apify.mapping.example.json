@@ -1,0 +1,13 @@
+{
+  "items_pointer": "",
+  "id_field": "/id",
+  "text_fields": [
+    "/text"
+  ],
+  "url_field": "/url",
+  "timestamp_field": "/timestamp",
+  "provider": "apify_social",
+  "kind": "observed",
+  "segment": null,
+  "population": null
+}

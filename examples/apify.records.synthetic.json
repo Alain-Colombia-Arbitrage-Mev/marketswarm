@@ -1,0 +1,9 @@
+[
+  {
+    "id": "example-comment",
+    "text": "Comentario artificial para probar el mapeo.",
+    "url": "https://example.com/comment/1",
+    "timestamp": "2026-10-18T10:00:00Z",
+    "synthetic_fixture": true
+  }
+]

@@ -1,0 +1,317 @@
+SWARM PROPIO EN RUST: ALCANCE FUNCIONAL Y ARQUITECTURA
+Fecha: 2026-10-19, America/Bogota
+Estado: especificacion consolidada; implementacion inicial en este repositorio.
+Validacion externa, inferencia real y criterios empiricos pendientes; consultar
+README.md para capacidades verificadas y limites actuales.
+
+1. OBJETIVO Y DECISIONES
+
+Construir una plataforma de investigacion, analisis y simulacion que responda
+preguntas sobre mercados financieros, productos, consumidores y monetizacion.
+El alcance completo incluye todos los modulos descritos aqui. La construccion
+por etapas es una secuencia de entrega, no una reduccion a trading o pricing.
+
+El nucleo, coordinacion, agentes, memoria, conectores, calculos, simulaciones
+numericas, contratos y servicio de consulta se implementaran en Rust.
+MiroFish sera una referencia conceptual; no sera dependencia de ejecucion.
+El sistema tendra modelos intercambiables por API y un adaptador de inferencia
+local. Ejecutar modelos por API no convierte su infraestructura en Rust.
+Proveedor inicial elegido por el usuario: OpenRouter; modelo configurable.
+Un agente o unidad de analisis no equivale a una red neuronal entrenada.
+El alcance no presupone entrenar un modelo fundacional desde cero.
+
+2. MODULOS FUNCIONALES OBLIGATORIOS
+
+M01. Mercados financieros
+Regimen, tendencia, volatilidad, estructura multitemporal, liquidez, OB/FVG,
+escenarios macro y noticias, relaciones entre activos y riesgo. Microestructura
+cuando exista profundidad o flujo real. Separar OHLCV y proxies de bid/ask/DOM.
+Salida: tesis, evidencia temporal, horizonte, invalidacion, alternativas y
+replay evaluable. Operativa inicial de investigacion/paper.
+
+M02. Investigacion de mercado y competencia
+Buscar necesidades, alternativas, segmentos, posicionamiento, propuestas de
+valor, precios, planes, condiciones y cambios de competidores. Diferenciar
+oferta publicada, opinion, dato de transaccion y resultado de experimento.
+Salida: mapa de comparables con fuentes, fecha y cobertura.
+
+M03. Redes sociales y comunidades
+Ingerir publicaciones, comentarios, respuestas y metricas disponibles mediante
+el actor de Apify del usuario. Analizar preguntas recurrentes, conversaciones,
+difusion, objeciones, oportunidades de contenido y reaccion a lanzamientos.
+La disponibilidad de cada red y campo dependera del actor verificado.
+Los datos recogidos no garantizan representatividad de toda la audiencia.
+
+M04. Opiniones y sentimiento sobre producto y marca
+Analisis por atributo: precio, calidad, utilidad, confianza, experiencia,
+soporte y otros atributos descubiertos. Mantener opiniones mixtas, negacion,
+incertidumbre y contexto. Mostrar cambios por periodo, canal y segmento
+solo cuando la segmentacion tenga respaldo; no inventar perfiles demograficos.
+Salida: temas y sentimiento con comentarios de respaldo y cobertura.
+
+M05. Descubrimiento y mejora de producto
+Relacionar necesidades no resueltas con beneficios, funciones, paquetes,
+posicionamiento y oportunidades de nuevos productos. Priorizar por evidencia,
+impacto supuesto, esfuerzo y confianza. Contrastar despues con resultados.
+
+M06. Recomendaciones para compradores
+Comparar productos por necesidades, preferencias declaradas, presupuesto,
+precio, disponibilidad y limitaciones. Explicar el ajuste y permitir no elegir.
+La disponibilidad y los precios deben tener fecha de consulta.
+Mantener separadas recomendaciones al comprador y decisiones del fabricante.
+
+M07. Contenido, lanzamiento y reputacion
+Ensayar publicaciones, mensajes, conceptos, lanzamientos, respuestas a criticas
+y cambios de politica. Identificar interpretaciones, dudas y puntos de rechazo.
+Producir propuestas y experimentos revisables; las reacciones artificiales son
+resultados de simulacion y no testimonios ni engagement real.
+
+M08. Pricing y arquitectura de oferta
+Investigar precios por pais, plataforma, segmento, categoria y periodicidad.
+Comparar mensual/anual y otras duraciones pertinentes; freemium, suscripcion,
+compra unica, consumibles, paquetes y pruebas gratuitas cuando apliquen.
+Estudiar presentacion de beneficios, onboarding y momento del paywall.
+Los benchmarks de suscripciones no se extrapolan automaticamente a comercio
+fisico, compras unicas u otras categorias sin fuentes pertinentes adicionales.
+
+M09. Willingness to pay (WTP): requisito central
+Estimar y contrastar cuanto pagaria cada segmento por una oferta definida,
+por que beneficios y bajo que condiciones. Incluir no comprar y alternativas
+competidoras. Separar precio, moneda, impuestos y periodo de facturacion.
+La salida principal sera una curva de aceptacion por precio y segmento dentro
+del rango estudiado, con incertidumbre y calidad de evidencia.
+No prometer identificar el maximo individual exacto a partir de una compra.
+
+M10. Simulacion social y de consumidores
+Perfiles fundamentados en evidencia, con necesidades, presupuesto, alternativas
+y memoria. Interacciones para explorar objeciones, recomendacion entre personas,
+difusion de opiniones y reaccion a ofertas. Variar supuestos y modelos.
+Mas agentes del mismo modelo no son mas observaciones humanas independientes.
+
+M11. Simulacion economica y de compras
+Simular cohortes, embudo, compras, mezcla de planes, renovaciones, cancelaciones,
+reembolsos, fallos de pago, coste de servicio y adquisicion cuando se conozcan.
+Modelar comisiones e impuestos aplicables sin descontarlos dos veces.
+Separar ingreso bruto, cobros netos y margen; separar caja anual anticipada de
+ingreso normalizado. Evitar contar suscriptores anuales como compras mensuales.
+Evaluar escenarios conservador/base/favorable y sensibilidad de resultados.
+
+M12. Investigacion y experimentacion
+Generar protocolos de encuesta, seleccion de participantes, pruebas de oferta
+y lectura de resultados. Relacionar cada experimento con la hipotesis original.
+Aprender de resultados y conservar historial de predicciones y errores.
+
+3. FUENTES Y ESTADO DE INTEGRACIONES
+
+Apify: el usuario declara disponer de un actor. Faltan ID, esquema de entrada,
+campos de salida, cobertura, dataset y limites. Implementar lectura de datasets
+existentes y ejecucion de tareas; verificar webhooks, paginacion, deduplicacion,
+reintentos y presupuesto antes de usar ejecuciones de pago.
+
+Investing: el usuario declara disponer de una API. Proveedor, documentacion,
+endpoints, cuotas y cobertura pendientes. No asumir que es una API oficial de
+Investing.com ni que contiene precios de productos o datos sociales.
+
+RevenueCat: fuente principal de investigacion de monetizacion de suscripciones.
+Extraer benchmarks y metodologia por categoria, pais/region, tienda, plan y
+horizonte. Registrar denominador y poblacion de cada tasa. Los informes publicos
+no implican acceso a transacciones individuales o datos privados de otras apps.
+La integracion de datos propios mediante API/exportacion sera un conector
+distinto, util cuando existan cuenta, permisos y datos.
+
+Superwall: fuente principal de investigacion de ofertas, precios, paywalls,
+onboarding, segmentacion y experimentos. Registrar condiciones y alcance de
+cada caso publicado. Tratar los casos seleccionados como evidencia contextual,
+sin asumir que su mejora se reproducira. Integrar resultados propios cuando
+esten disponibles mediante las interfaces que se verifiquen.
+
+Busqueda: conector de busqueda y lectura de fuentes primarias para documentacion,
+estudios, comparables y cambios de oferta; proveedor por concretar. Conservar
+enlace, fecha, extracto pertinente y limitaciones de acceso. Una URL guardada
+no equivale a contenido leido. Marcar contenido inaccesible o desactualizado.
+
+Datos propios: catalogo, costes, entrevistas, encuestas, soporte, analitica,
+compras y resultados de experimentos, conforme se aporten.
+Las credenciales se resolveran desde configuracion segura del servidor y no
+apareceran en informes, contratos, fixtures ni registros de salida.
+
+4. PROTOCOLO DE WTP
+
+A. Definir producto, beneficios, segmento, canal, pais, moneda, periodicidad,
+alternativas y objetivo comercial. Fijar fecha de corte y version de la oferta.
+B. Investigar comparables en RevenueCat, Superwall y fuentes complementarias.
+C. Proponer precios y paquetes; documentar origen de cada supuesto y diferencias
+entre poblacion de referencia y publico objetivo.
+D. Ejecutar simulacion de perfiles y sensibilidad; conservar la opcion de no
+compra. Las respuestas sinteticas son hipotesis y no porcentajes validados.
+E. Preparar investigacion humana: Gabor-Granger para aceptacion a distintos
+precios o conjoint/eleccion discreta para beneficios, precio y alternativas,
+incluida no compra. Registrar reclutamiento, muestra y posibles sesgos.
+F. Preparar experimento comercial con asignacion aleatoria a ofertas cuando
+corresponda. Aislar precio manteniendo oferta/presentacion constantes o usar
+un diseno factorial explicito. Definir metrica, efecto relevante, muestra,
+duracion, ventanas de maduracion y regla de parada antes de observar resultados.
+G. Medir pago completado, conversion desde un denominador explicito, margen,
+reembolsos y renovaciones. Separar inicio de trial y trial convertido a pago.
+Una lista de espera o clic expresa interes; no acredita aceptacion de pago.
+Las preventas deben declarar entrega y condiciones; un deposito solo evidencia
+compromiso por su importe y condiciones, no WTP total por todo el producto.
+H. Contrastar prediccion y observacion, actualizar estimacion y conservar el
+resultado previo. No declarar ganador con informacion insuficiente.
+
+Estados de evidencia, conservados por separado:
+- benchmark: referencia externa, con poblacion y alcance.
+- simulated: reaccion o proyeccion sintetica con supuestos explicitos.
+- stated: eleccion o disposicion declarada por participantes humanos.
+- observed: comportamiento de pago observado en condiciones registradas.
+
+Estado adicional de conclusion: inconclusive, supported_in_scope o contradicted.
+supported_in_scope requiere criterios predefinidos, evidencia humana/comercial
+adecuada, muestra y precision suficientes para la conclusion y alcance declarado.
+No se eleva una simulacion a validacion agregando mas agentes o mas rondas.
+
+Entregable WTP: curvas de aceptacion e ingreso/margen esperado, intervalos
+segun el modelo estadistico, segmentos, atributos valorados, alternativas,
+supuestos, metodos, observaciones y siguiente experimento.
+Separar precio de mayor aceptacion, mayor ingreso y mayor margen.
+No inferir elasticidad causal de correlaciones entre apps de distinto precio.
+
+5. ARQUITECTURA DEL SWARM
+
+Flujo: pregunta -> plan de investigacion -> adquisicion -> normalizacion y
+evidencia -> analistas -> contraste -> simulacion -> verificacion -> informe
+-> experimento/observacion -> evaluacion y actualizacion.
+
+Roles activables segun pregunta:
+- Planificador y coordinador de tareas.
+- Investigador de fuentes y verificador de calidad temporal.
+- Analista financiero y de regimen/estructura.
+- Analista macro/noticias y microestructura si hay datos pertinentes.
+- Analista de competencia y posicionamiento.
+- Analista de sentimiento, necesidades y comunidades.
+- Analista de producto y recomendacion.
+- Analista de pricing, paquetes y monetizacion.
+- Analista de WTP y diseno experimental.
+- Simulador de consumidores e interacciones sociales.
+- Motor de cohortes y economia de la oferta.
+- Critico de hipotesis, riesgo y suficiencia de evidencia.
+- Sintetizador de informe con referencias verificables.
+
+No ejecutar todos los roles ante cada evento. Compartir calculos y documentos,
+usar concurrencia acotada, cancelar tareas vencidas y aplicar limites de tiempo,
+tokens, coste y rondas. Registrar fallos parciales y permitir reanudacion.
+El debate no decide por mayoria simple; registrar dependencia entre fuentes,
+modelos y agentes, contradicciones y evidencia faltante.
+La confianza verbal de un modelo no se presentara como probabilidad calibrada.
+
+6. LIMITES ENTRE RUST, MODELOS Y SISTEMAS EXISTENTES
+
+Componentes propuestos en un workspace Rust propio:
+core: contratos de pregunta, tarea, evidencia, hipotesis y resultado.
+runtime: planificacion, concurrencia, estado, limites y recuperacion.
+connectors: Apify, Investing, busqueda/documentos y datos comerciales.
+inference: interfaz de modelos por API y adaptador local.
+memory: evidencia documental, entidades, relaciones e historial versionado.
+analysis: mercados, producto, sentimiento, competencia y recomendacion.
+simulation: consumidores, escenarios, cohortes y sensibilidad numerica.
+wtp: estudios, curvas, experimentos, incertidumbre y contraste.
+evaluation: benchmarks, replay, calibracion y comparacion de versiones.
+service: CLI/API para ejecutar consultas y recuperar resultados.
+
+El motor nuevo no requiere MiroFish, OASIS, Zep ni un runtime Python.
+Las herramientas de investigacion ya existentes pueden seguir siendo externas.
+Reutilizar componentes locales de Rust solo despues de verificar sus contratos
+y adecuacion. La existencia de un modulo no acredita su validacion para este uso.
+La seleccion de librerias, almacenamiento y modelos queda para implementacion.
+
+7. CONTRATOS MINIMOS DE DATOS
+
+Evidence: id, source_url/source_ref, proveedor, tipo, fecha_publicacion,
+fecha_recogida, periodo_observado, contenido/hash, moneda/unidad, segmento,
+poblacion, denominador, cobertura y limitaciones cuando correspondan.
+Hypothesis: pregunta, oferta/activo, horizonte, supuestos, evidencia a favor y
+en contra, invalidacion y metodo de contraste.
+AgentResult: tarea, rol, modelo/version, evidencia utilizada, conclusion,
+tipo de evidencia, incertidumbre, limitaciones, coste y tiempos.
+SimulationRun: version, semilla, inputs, datos/fecha de corte, modelo/prompts,
+parametros, presupuesto, escenarios y salidas. Registrar respuestas de modelos
+externos para replay; una semilla no garantiza repetibilidad de su inferencia.
+WtpStudy: oferta, alternativas, segmento, precios, moneda, periodo, metodo,
+reclutamiento, participantes anonimizados, elecciones, curva y conclusion.
+Experiment: hipotesis, asignacion, variantes, exposicion, pagos, ventana,
+metricas, muestra/precision, decisiones y criterios predefinidos.
+
+Todo resultado numerico debe poder rastrearse a datos y calculos. Separar
+hechos observados, inferencias y simulaciones dentro del mismo informe.
+El texto externo se procesa como datos, no como instrucciones del sistema.
+
+8. VERIFICACION Y CRITERIOS DE ACEPTACION
+
+C01. Cobertura: los doce modulos tienen contrato, recorrido y evaluacion propios.
+C02. Rust: el ejecutable principal funciona sin MiroFish ni runtime Python.
+C03. Integraciones: pruebas con entradas/salidas reales del actor y la API,
+incluyendo esquema, paginacion, errores, cuotas y persistencia verificable.
+C04. Evidencia: toda recomendacion referencia fuentes utilizadas y fecha de corte;
+no hay metricas de actividad inventadas ni fuentes no leidas como verificadas.
+C05. Sentimiento: evaluacion con ejemplos etiquetados por personas; medir por
+atributo e idioma, incluyendo opiniones mixtas y casos inciertos.
+C06. WTP: simulaciones no pueden adquirir estado de validacion humana. Encuestas
+y pagos mantienen su procedencia y alcance. Comparar prediccion con resultados
+reservados o posteriores y medir error y calibracion donde sea apropiado.
+C07. Economia: coherencia de periodos, impuestos/comisiones, devoluciones y
+renovaciones; analisis de sensibilidad con supuestos identificables.
+C08. Mercados: fijar datos, ventanas, costes, semillas y presupuesto por comparacion;
+evitar informacion futura y evaluar ventanas no solapadas/fuera de muestra.
+Separar aprobar pruebas de software y lograr resultados de trading robustos.
+C09. Valor del swarm: comparar frente a un analista unico y un metodo sencillo,
+con el mismo conjunto de evaluacion y presupuesto comparable; retirar pasos
+que aumenten coste sin mejorar calidad medible.
+C10. Operacion: limites efectivos de coste/tiempo, recuperacion tras interrupcion,
+fallos parciales visibles y secretos ausentes de informes/logs.
+C11. Recomendaciones: comprobar requisitos, evidencia de atributos, vigencia del
+precio y opcion de no compra. Registrar discrepancias con elecciones posteriores.
+C12. Simulacion social: contrastar patrones previstos con respuestas observadas;
+si no existe evidencia suficiente, mantener el resultado como exploratorio.
+
+9. SECUENCIA DE ENTREGA DEL ALCANCE COMPLETO
+
+E1. Contratos, almacenamiento, runtime Rust y recorrido offline con datos
+aportados. Fixture sintetico identificado como tal, nunca actividad real.
+E2. Conectores verificados, busqueda y registro de evidencia; lectura inicial
+de datasets existentes antes de ampliar recogida.
+E3. Agentes de los dos dominios, modelos intercambiables y contraste de hipotesis.
+E4. Simulacion social, economica y protocolo completo de WTP.
+E5. Ingestion de estudios/experimentos reales y evaluacion de calidad predictiva.
+E6. Comparacion del swarm contra bases simples y entrega operativa completa.
+
+Cada etapa reportara funciones implementadas, pruebas ejecutadas, integraciones
+pendientes y limites observados. Esta especificacion no declara etapas terminadas.
+
+10. INFORMACION PENDIENTE PARA CONECTORES Y PRIMER ESTUDIO
+
+ID/enlace del actor Apify y un dataset de referencia; proveedor/documentacion
+de Investing; proveedor de busqueda; modelos y presupuesto de inferencia;
+producto/mercado del primer estudio, costes y datos humanos/comerciales disponibles.
+Estos pendientes no impiden desarrollar contratos y modulos offline.
+No se han ejecutado actores, llamadas de pago, experimentos comerciales ni
+operaciones de trading al redactar esta especificacion.
+
+11. FUENTES DE REFERENCIA CONSULTADAS EN LA CONVERSACION
+
+MiroFish, referencia conceptual:
+https://github.com/666ghj/MiroFish
+https://github.com/666ghj/MiroFish/blob/main/backend/scripts/run_parallel_simulation.py
+Apify, ejecuciones y datasets:
+https://docs.apify.com/api/v2/actor-runs
+RevenueCat, investigacion de suscripciones:
+https://www.revenuecat.com/state-of-subscription-apps
+Superwall, casos y lectura de experimentos:
+https://superwall.com/case-studies
+https://superwall.com/docs/dashboard/dashboard-campaigns/campaigns-understanding-experiment-results
+Metodos de investigacion de precios:
+https://www.qualtrics.com/articles/strategy-research/pricing-survey-questions/
+Limites de WTP sintetica en el contexto estudiado por sus autores:
+https://arxiv.org/abs/2602.09802
+
+Referencias web revisadas durante la conversacion del 18-19 de octubre de 2026.
+Las cifras concretas se extraeran y verificaran al ejecutar cada investigacion.

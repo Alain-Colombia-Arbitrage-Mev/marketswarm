@@ -1,0 +1,50 @@
+[
+  {
+    "id": "fixture-review",
+    "source": "fixture:fixture-review",
+    "provider": "synthetic_example",
+    "kind": "observed",
+    "published_at": null,
+    "collected_at": "2026-10-18T12:00:00Z",
+    "observed_at": "2026-10-18T12:00:00Z",
+    "segment": "segmento artificial de demostración",
+    "population": "datos artificiales",
+    "content": "Es útil pero el precio es caro. El soporte no es malo.",
+    "limitations": [
+      "Fixture sintético para comprobar el software; no es evidencia de mercado."
+    ],
+    "synthetic_fixture": true
+  },
+  {
+    "id": "fixture-catalog",
+    "source": "fixture:fixture-catalog",
+    "provider": "synthetic_example",
+    "kind": "benchmark",
+    "published_at": null,
+    "collected_at": "2026-10-18T12:00:00Z",
+    "observed_at": "2026-10-18T12:00:00Z",
+    "segment": "segmento artificial de demostración",
+    "population": "datos artificiales",
+    "content": "Catálogo artificial: Básico mensual 500 centavos USD con audio; Plus mensual 1000 con audio y offline.",
+    "limitations": [
+      "Fixture sintético para comprobar el software; no es evidencia de mercado."
+    ],
+    "synthetic_fixture": true
+  },
+  {
+    "id": "fixture-survey",
+    "source": "fixture:fixture-survey",
+    "provider": "synthetic_example",
+    "kind": "stated",
+    "published_at": null,
+    "collected_at": "2026-10-18T12:00:00Z",
+    "observed_at": "2026-10-18T12:00:00Z",
+    "segment": "segmento artificial de demostración",
+    "population": "datos artificiales",
+    "content": "Respuestas artificiales de encuesta y OHLCV de prueba. No son personas ni operaciones reales.",
+    "limitations": [
+      "Fixture sintético para comprobar el software; no es evidencia de mercado."
+    ],
+    "synthetic_fixture": true
+  }
+]

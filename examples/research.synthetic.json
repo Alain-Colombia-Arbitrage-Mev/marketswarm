@@ -1,0 +1,321 @@
+{
+  "question": "Demostración artificial de todos los módulos: mercados, producto, redes, sentimiento, recomendaciones, pricing y disposición a pagar. No emitir conclusiones de mercado reales.",
+  "as_of": "2026-10-19T00:00:00Z",
+  "modules": [
+    "financial_markets",
+    "competition",
+    "social_media",
+    "sentiment",
+    "product_discovery",
+    "recommendations",
+    "content_reputation",
+    "pricing",
+    "willingness_to_pay",
+    "social_simulation",
+    "economics",
+    "experimentation"
+  ],
+  "evidence_ids": [
+    "fixture-review",
+    "fixture-catalog",
+    "fixture-survey"
+  ],
+  "context": {
+    "fixture_only": true,
+    "market_evidence_ids": [
+      "fixture-survey"
+    ],
+    "market_timeframe": "daily, bar close UTC; synthetic",
+    "market_bars": [
+      {
+        "at": "2026-10-10T00:00:00Z",
+        "open": 100,
+        "high": 102,
+        "low": 99,
+        "close": 101,
+        "volume": 1000
+      },
+      {
+        "at": "2026-10-11T00:00:00Z",
+        "open": 103,
+        "high": 105,
+        "low": 102,
+        "close": 104,
+        "volume": 1010
+      },
+      {
+        "at": "2026-10-12T00:00:00Z",
+        "open": 106,
+        "high": 108,
+        "low": 105,
+        "close": 107,
+        "volume": 1020
+      },
+      {
+        "at": "2026-10-13T00:00:00Z",
+        "open": 109,
+        "high": 111,
+        "low": 108,
+        "close": 110,
+        "volume": 1030
+      },
+      {
+        "at": "2026-10-14T00:00:00Z",
+        "open": 112,
+        "high": 114,
+        "low": 111,
+        "close": 113,
+        "volume": 1040
+      },
+      {
+        "at": "2026-10-15T00:00:00Z",
+        "open": 115,
+        "high": 117,
+        "low": 114,
+        "close": 116,
+        "volume": 1050
+      }
+    ],
+    "catalog": [
+      {
+        "id": "basic",
+        "evidence_id": "fixture-catalog",
+        "currency": "USD",
+        "billing_period": "monthly",
+        "price_cents": 500,
+        "available": true,
+        "observed_at": "2026-10-18T12:00:00Z",
+        "features": [
+          "audio"
+        ]
+      },
+      {
+        "id": "plus",
+        "evidence_id": "fixture-catalog",
+        "currency": "USD",
+        "billing_period": "monthly",
+        "price_cents": 1000,
+        "available": true,
+        "observed_at": "2026-10-18T12:00:00Z",
+        "features": [
+          "audio",
+          "offline"
+        ]
+      }
+    ],
+    "buyer": {
+      "currency": "USD",
+      "billing_period": "monthly",
+      "budget_cents": 800,
+      "required_features": [
+        "audio"
+      ],
+      "desired_features": [
+        "offline"
+      ]
+    },
+    "social_scenario": {
+      "seed": 42,
+      "price_cents": 500,
+      "rounds": 5,
+      "personas": [
+        {
+          "id": "persona-0",
+          "budget_cents": 300,
+          "interest": 0.2,
+          "influence": 0.3,
+          "evidence_ids": [
+            "fixture-review"
+          ]
+        },
+        {
+          "id": "persona-1",
+          "budget_cents": 600,
+          "interest": 0.30000000000000004,
+          "influence": 0.3,
+          "evidence_ids": [
+            "fixture-review"
+          ]
+        },
+        {
+          "id": "persona-2",
+          "budget_cents": 900,
+          "interest": 0.4,
+          "influence": 0.3,
+          "evidence_ids": [
+            "fixture-review"
+          ]
+        },
+        {
+          "id": "persona-3",
+          "budget_cents": 1200,
+          "interest": 0.5,
+          "influence": 0.3,
+          "evidence_ids": [
+            "fixture-review"
+          ]
+        }
+      ],
+      "edges": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          0
+        ]
+      ]
+    }
+  },
+  "limits": {
+    "concurrency": 3,
+    "timeout_seconds": 60,
+    "max_output_tokens": 1800,
+    "max_cost_usd": 1.0
+  },
+  "study": {
+    "offer": "Oferta artificial audio-v1",
+    "segment": "segmento artificial de demostración",
+    "currency": "USD",
+    "billing_period": "monthly",
+    "kind": "stated",
+    "protocol": {
+      "method": "gabor_granger",
+      "registered_at": "2026-10-17T00:00:00Z",
+      "closes_at": "2026-10-18T12:00:00Z",
+      "minimum_per_price": 100,
+      "maximum_half_width": 0.08,
+      "population": "fixture artificial; no participantes reales",
+      "allocation": "illustrative",
+      "maturity_days": 0
+    },
+    "responses": [
+      {
+        "participant_id": "synthetic-0",
+        "price_cents": 500,
+        "outcome": "yes",
+        "evidence_id": "fixture-survey",
+        "recorded_at": "2026-10-18T10:00:00Z"
+      },
+      {
+        "participant_id": "synthetic-1",
+        "price_cents": 500,
+        "outcome": "yes",
+        "evidence_id": "fixture-survey",
+        "recorded_at": "2026-10-18T10:00:00Z"
+      },
+      {
+        "participant_id": "synthetic-2",
+        "price_cents": 500,
+        "outcome": "yes",
+        "evidence_id": "fixture-survey",
+        "recorded_at": "2026-10-18T10:00:00Z"
+      },
+      {
+        "participant_id": "synthetic-3",
+        "price_cents": 500,
+        "outcome": "no",
+        "evidence_id": "fixture-survey",
+        "recorded_at": "2026-10-18T10:00:00Z"
+      },
+      {
+        "participant_id": "synthetic-4",
+        "price_cents": 1000,
+        "outcome": "yes",
+        "evidence_id": "fixture-survey",
+        "recorded_at": "2026-10-18T10:00:00Z"
+      },
+      {
+        "participant_id": "synthetic-5",
+        "price_cents": 1000,
+        "outcome": "no",
+        "evidence_id": "fixture-survey",
+        "recorded_at": "2026-10-18T10:00:00Z"
+      },
+      {
+        "participant_id": "synthetic-6",
+        "price_cents": 1000,
+        "outcome": "no",
+        "evidence_id": "fixture-survey",
+        "recorded_at": "2026-10-18T10:00:00Z"
+      },
+      {
+        "participant_id": "synthetic-7",
+        "price_cents": 1000,
+        "outcome": "no",
+        "evidence_id": "fixture-survey",
+        "recorded_at": "2026-10-18T10:00:00Z"
+      }
+    ]
+  },
+  "economy": {
+    "currency": "USD",
+    "seed": 42,
+    "repetitions": 100,
+    "scenarios": [
+      {
+        "name": "conservador",
+        "visitors": 1000,
+        "price_cents": 500,
+        "period_months": 1,
+        "cycles": 6,
+        "conversion": 0.01,
+        "renewal": 0.6,
+        "refund_rate": 0.03,
+        "billing_failure": 0.02,
+        "fee_rate": 0.15,
+        "tax_inclusive_rate": 0.0,
+        "service_cost_per_month_cents": 50,
+        "acquisition_cost_per_visitor_cents": 5,
+        "assumption_evidence_ids": [
+          "fixture-catalog"
+        ]
+      },
+      {
+        "name": "base",
+        "visitors": 1000,
+        "price_cents": 500,
+        "period_months": 1,
+        "cycles": 6,
+        "conversion": 0.03,
+        "renewal": 0.75,
+        "refund_rate": 0.03,
+        "billing_failure": 0.02,
+        "fee_rate": 0.15,
+        "tax_inclusive_rate": 0.0,
+        "service_cost_per_month_cents": 50,
+        "acquisition_cost_per_visitor_cents": 5,
+        "assumption_evidence_ids": [
+          "fixture-catalog"
+        ]
+      },
+      {
+        "name": "favorable",
+        "visitors": 1000,
+        "price_cents": 500,
+        "period_months": 1,
+        "cycles": 6,
+        "conversion": 0.05,
+        "renewal": 0.85,
+        "refund_rate": 0.03,
+        "billing_failure": 0.02,
+        "fee_rate": 0.15,
+        "tax_inclusive_rate": 0.0,
+        "service_cost_per_month_cents": 50,
+        "acquisition_cost_per_visitor_cents": 5,
+        "assumption_evidence_ids": [
+          "fixture-catalog"
+        ]
+      }
+    ]
+  }
+}

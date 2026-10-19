@@ -1,0 +1,28 @@
+[package]
+name = "market-swarm"
+version = "0.1.0"
+edition = "2021"
+description = "Evidence-driven multi-agent research, pricing and willingness-to-pay simulations in Rust"
+repository = "https://github.com/Alain-Colombia-Arbitrage-Mev/marketswarm"
+readme = "README.md"
+keywords = ["multi-agent", "market-research", "pricing", "simulation", "openrouter"]
+categories = ["command-line-utilities", "simulation"]
+publish = false
+license = "LicenseRef-Proprietary"
+
+[dependencies]
+anyhow = "1.0"
+axum = "0.8"
+chrono = { version = "0.4", features = ["serde"] }
+clap = { version = "4.5", features = ["derive", "env"] }
+dotenvy = "0.15"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "stream"] }
+rusqlite = { version = "0.37", features = ["bundled"] }
+scraper = "0.27"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sha2 = "0.10"
+tokio = { version = "1", features = ["full"] }
+
+[dev-dependencies]
+tempfile = "3"

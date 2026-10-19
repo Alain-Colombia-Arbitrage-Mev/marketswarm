@@ -1,0 +1,50 @@
+[
+  {
+    "id": "synthetic-case-0",
+    "predicted_at": "2026-10-10T00:00:00Z",
+    "outcome_at": "2026-10-18T00:00:00Z",
+    "actual": false,
+    "baseline_probability": 0.5,
+    "single_agent_probability": 0.3,
+    "swarm_probability": 0.2,
+    "baseline_cost_usd": 0.0,
+    "single_agent_cost_usd": 0.01,
+    "swarm_cost_usd": 0.05
+  },
+  {
+    "id": "synthetic-case-1",
+    "predicted_at": "2026-10-10T00:00:00Z",
+    "outcome_at": "2026-10-18T00:00:00Z",
+    "actual": true,
+    "baseline_probability": 0.5,
+    "single_agent_probability": 0.7,
+    "swarm_probability": 0.8,
+    "baseline_cost_usd": 0.0,
+    "single_agent_cost_usd": 0.01,
+    "swarm_cost_usd": 0.05
+  },
+  {
+    "id": "synthetic-case-2",
+    "predicted_at": "2026-10-10T00:00:00Z",
+    "outcome_at": "2026-10-18T00:00:00Z",
+    "actual": false,
+    "baseline_probability": 0.5,
+    "single_agent_probability": 0.4,
+    "swarm_probability": 0.35,
+    "baseline_cost_usd": 0.0,
+    "single_agent_cost_usd": 0.01,
+    "swarm_cost_usd": 0.05
+  },
+  {
+    "id": "synthetic-case-3",
+    "predicted_at": "2026-10-10T00:00:00Z",
+    "outcome_at": "2026-10-18T00:00:00Z",
+    "actual": true,
+    "baseline_probability": 0.5,
+    "single_agent_probability": 0.6,
+    "swarm_probability": 0.65,
+    "baseline_cost_usd": 0.0,
+    "single_agent_cost_usd": 0.01,
+    "swarm_cost_usd": 0.05
+  }
+]
