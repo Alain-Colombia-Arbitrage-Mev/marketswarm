@@ -16,8 +16,8 @@ investigación. El precio recomendado, la aceptación declarada y el pago observ
 se mantienen como resultados distintos.
 
 El runtime, los conectores y las simulaciones están escritos en Rust. La
-inferencia utiliza **OpenRouter**, con **`nvidia/nemotron-3.5-super-vl`** como modelo
-predeterminado para todos los especialistas, el crítico y la síntesis, o un
+inferencia utiliza **OpenRouter**, con **`nvidia/nemotron-3.5-super-vl:free`** como modelo
+predeterminado (variante gratuita) para todos los especialistas, el crítico y la síntesis, o un
 servidor local compatible con chat completions. MiroFish es una referencia conceptual; el proyecto funciona sin
 MiroFish, OASIS, Zep ni Python como dependencias de ejecución.
 
@@ -123,7 +123,7 @@ el entorno del proceso. También se aceptan `OPENROUTER_KEY` y `openrouter_key`,
 en ese orden de prioridad después de `OPENROUTER_API_KEY`; los valores vacíos se
 omiten. `doctor` muestra si existe alguna credencial utilizable sin revelar su
 contenido. `OPENROUTER_MODEL` es opcional: el valor predeterminado es
-`nvidia/nemotron-3.5-super-vl`. Puedes cambiarlo con `--model` o con esa variable;
+`nvidia/nemotron-3.5-super-vl:free`. Puedes cambiarlo con `--model` o con esa variable;
 la opción de línea de comandos tiene prioridad. `.env.example` incluye el modelo
 y deja vacías las credenciales.
 La carga de un archivo es explícita; las variables existentes tienen prioridad:
@@ -136,6 +136,9 @@ cargo run --locked -- --env-file .env --db state/demo.sqlite run examples/resear
 Esa última orden realiza llamadas al modelo seleccionado, con el presupuesto
 del request. El modelo debe admitir JSON `response_format`. La aplicación consulta
 el catálogo actual para verificar disponibilidad, capacidades y precios.
+La variante `:free` figura con precio cero de entrada y salida. Se envía ese ID
+exacto, sin configurar una alternativa de pago. Los límites o la falta de
+disponibilidad del endpoint gratuito pueden dejar una corrida parcial.
 La selección de Nemotron se verificó en el catálogo de OpenRouter. Su razonamiento
 está activado por defecto en el proveedor y puede consumir parte del límite de
 salida: ajusta `limits.max_output_tokens` para dejar espacio a la respuesta JSON.
@@ -289,7 +292,7 @@ Fuentes técnicas: [OpenRouter](https://openrouter.ai/docs/api_reference/overvie
 [routing y precios](https://openrouter.ai/docs/guides/routing/provider-selection),
 [datasets Apify](https://docs.apify.com/api/v2/dataset-items-get),
 [ejecución de actores](https://docs.apify.com/api/v2/actors-runs-post).
-Modelo seleccionado: [NVIDIA Nemotron 3.5 Super VL en OpenRouter](https://openrouter.ai/nvidia/nemotron-3.5-super-vl).
+Modelo seleccionado: [NVIDIA Nemotron 3.5 Super VL gratuito en OpenRouter](https://openrouter.ai/nvidia/nemotron-3.5-super-vl:free).
 
 ## Licencia
 

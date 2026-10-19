@@ -7,7 +7,7 @@ use anyhow::{ensure, Context, Result};
 use reqwest::{Client, Url};
 use serde_json::{json, Value};
 
-pub const DEFAULT_OPENROUTER_MODEL: &str = "nvidia/nemotron-3.5-super-vl";
+pub const DEFAULT_OPENROUTER_MODEL: &str = "nvidia/nemotron-3.5-super-vl:free";
 
 pub fn select_openrouter_model(model: Option<String>) -> String {
     model
@@ -34,14 +34,15 @@ pub fn output_format(strict: bool) -> Value {
         return json!({"type":"json_object"});
     }
     let strings = json!({"type":"array","items":{"type":"string"}});
+    let citations = json!({"type":"array","minItems":1,"items":{"type":"string"}});
     json!({"type":"json_schema","json_schema":{"name":"research_agent_output","strict":true,"schema":{
         "type":"object","additionalProperties":false,
         "required":["summary","findings","hypotheses","gaps","next_experiments"],
         "properties":{
             "summary":{"type":"string"},
-            "findings":{"type":"array","items":{"type":"object","additionalProperties":false,
+            "findings":{"type":"array","maxItems":5,"items":{"type":"object","additionalProperties":false,
                 "required":["statement","evidence_ids","interpretation"],
-                "properties":{"statement":{"type":"string"},"evidence_ids":strings,
+                "properties":{"statement":{"type":"string"},"evidence_ids":citations,
                     "interpretation":{"type":"string","enum":["observation","inference","simulation"]}}}},
             "hypotheses":strings,"gaps":strings,"next_experiments":strings
         }

@@ -1,6 +1,8 @@
 MARKETSWARM - PRUEBA REAL DE ANALISIS
 Fecha: 2026-10-19, America/Bogota
-Modelo solicitado y devuelto: nvidia/nemotron-3.5-super-vl, via OpenRouter.
+Primeros tres intentos: nvidia/nemotron-3.5-super-vl, via OpenRouter (de pago).
+El usuario selecciono posteriormente nvidia/nemotron-3.5-super-vl:free como
+modelo predeterminado. Los importes historicos de esos tres intentos se conservan.
 
 CASO Y FUENTES
 Concepto hipotetico de app de audio guiado, con Colombia/LATAM como audiencia
@@ -43,10 +45,36 @@ Duracion aproximada: 104 segundos. Lectura posterior del informe desde SQLite
 sin llamada adicional al modelo: verificada.
 Revision del motor: 5732d777d007bd949e3aef836a578f6f6f4f06e2cc1ec720be9506b618da34ec.
 
-Las reservas de los tres intentos suman USD 0.248074556, dentro del techo total
+Las reservas de los tres intentos de pago suman USD 0.248074556, dentro del techo total
 local de USD 0.25. El coste conocido en respuestas aceptadas/recibos es
 USD 0.083100303; la factura de los tres fallos anteriores es desconocida.
 No se presenta el coste conocido como factura total de la cuenta.
+
+CUARTO INTENTO, PRIMER RECORRIDO GRATUITO
+Modelo solicitado y devuelto: nvidia/nemotron-3.5-super-vl:free.
+Run: 256afdd7fd1b13d378a25bb69fbb7cf30cf62a5ca61b9c5acbc9993e19792fff
+Estado partial: 9 etapas completadas y 5 fallidas. Cuatro respuestas incluian
+hallazgos sin referencias y fueron rechazadas; la quinta fallo sin recibo y
+sin diagnostico suficiente para atribuir una causa exacta.
+Los 13 recibos disponibles reportan USD 0 y la reserva local es USD 0.
+No se relajo la validacion ni se sustituyo el modelo por la variante de pago.
+Se reforzo el JSON Schema con minItems=1 para referencias por hallazgo y
+maxItems=5 para hallazgos, coherente con las instrucciones existentes.
+El catalogo de OpenRouter anuncia prompt=0 y completion=0 para ese ID.
+Referencia: https://openrouter.ai/nvidia/nemotron-3.5-super-vl:free
+
+QUINTO INTENTO, RECORRIDO GRATUITO COMPLETO CON CITAS OBLIGATORIAS
+Modelo solicitado y devuelto: nvidia/nemotron-3.5-super-vl:free.
+Run: 6b7b4c84d0bf9341376a03d745ec8eec1acd5b8439db74d9c3608bb28325be8c
+Estado completed: 12 especialistas, critico y sintesis completados (14/14).
+Los 14 recibos tienen IDs distintos y reportan coste USD 0. Reserva local USD 0.
+Todas las respuestas aceptadas contienen como maximo cinco hallazgos y al menos
+una referencia por hallazgo. Se mantuvo la validacion de IDs disponibles.
+Se uso JSON Schema estricto, razonamiento interno desactivado, concurrencia 4,
+4096 tokens maximos de salida y 180 segundos maximos por etapa.
+Revision del motor: d252d0c0db69ace942b2659ed0e9a7debe5de014ff19b1340372d7fea7ac980c.
+La prueba confirma la ejecucion gratuita del recorrido; no mide precision ni
+valida WTP. Las limitaciones semanticas y de cobertura siguen vigentes.
 
 CAMBIOS MOTIVADOS POR LA PRUEBA
 - Se acepta openrouter_key, ademas de OPENROUTER_API_KEY y OPENROUTER_KEY.
@@ -86,10 +114,10 @@ El prompt mas preciso reduce algunos errores; no garantiza eliminarlos.
 El texto de RevenueCat recuperado incluye cifras distintas para ingresos
 mensuales de Productivity (91% en un pasaje y 77% en otro). Debe revisarse contra
 la tabla original antes de usar cualquiera de esas cifras en una decision.
-El critico del ultimo intento repite varios benchmarks y no detecta esa
+El critico del tercer intento repite varios benchmarks y no detecta esa
 contradiccion de la fuente completa. Su presencia no sustituye la revision
 humana ni demuestra que el swarm mejore el resultado de un solo agente.
-La salida final de sintesis coincide con la del critico pese a tener un ID de
+En ese tercer intento, la salida de sintesis coincide con la del critico pese a tener un ID de
 llamada distinto; no constituye corroboracion independiente.
 
 El modulo financiero repite benchmarks de suscripciones sin datos OHLCV; su

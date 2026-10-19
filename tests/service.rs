@@ -22,7 +22,7 @@ async fn requested_default_model_is_used_without_sending_uncredentialed_requests
     let info: Value = serde_json::from_slice(&output.stdout).unwrap();
     assert_eq!(
         info["effective_openrouter_model"],
-        "nvidia/nemotron-3.5-super-vl"
+        "nvidia/nemotron-3.5-super-vl:free"
     );
     assert_eq!(info["credentials"]["OPENROUTER_API_KEY"], false);
 

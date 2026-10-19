@@ -5,10 +5,15 @@ VERIFICADO EN EL CHECKOUT INDEPENDIENTE
 - cargo fmt --check: aprobado.
 - cargo clippy --locked --all-targets -- -D warnings: aprobado sin advertencias.
 - cargo test --locked: 27 pruebas de motor y 3 de servicio; 30 aprobadas.
-- Seleccion predeterminada de nvidia/nemotron-3.5-super-vl, override por entorno,
+- Seleccion predeterminada de nvidia/nemotron-3.5-super-vl:free, override por entorno,
   alias openrouter_key cargado desde archivo local sin revelar su contenido,
   error explicito sin credencial y recibos tras respuestas truncadas: aprobados.
-- Inferencia real con OpenRouter y fuentes publicas de RevenueCat/Superwall:
+- Inferencia real con nvidia/nemotron-3.5-super-vl:free: 14/14 etapas
+  completadas, 14 IDs de respuesta distintos y coste informado USD 0.
+  El primer intento gratuito fue parcial; se exigieron citas en JSON Schema
+  antes de repetirlo sin relajar la validacion de fuentes.
+- Inferencia real anterior con la variante de pago, sin sufijo :free,
+  y fuentes publicas de RevenueCat/Superwall:
   14/14 etapas completadas con razonamiento interno desactivado y USD 0.014926824
   informados en esa corrida. Dos intentos anteriores parciales estan conservados;
   detalles y revision semantica en docs/LIVE_ANALYSIS_2026-10-19.es.txt.
@@ -32,12 +37,12 @@ VERIFICADO EN EL CHECKOUT INDEPENDIENTE
 - Revision del codigo para patrones de credenciales, archivos locales y rutas
   personales: sin coincidencias en la lista de archivos preparada para publicar.
 - .env.example deja vacias las credenciales y configura el modelo predeterminado
-  nvidia/nemotron-3.5-super-vl; incluye SWARM_API_TOKEN para el servicio local.
+  nvidia/nemotron-3.5-super-vl:free; incluye SWARM_API_TOKEN para el servicio local.
 - GitHub Actions configurado para Linux y macOS, con permisos contents:read.
   Su resultado remoto debe consultarse en la pestaña Actions del repositorio.
 
 REVISION DEL MOTOR COMPROBADA
-5732d777d007bd949e3aef836a578f6f6f4f06e2cc1ec720be9506b618da34ec
+d252d0c0db69ace942b2659ed0e9a7debe5de014ff19b1340372d7fea7ac980c
 
 ARTEFACTOS LOCALES
 state/ y output/ contienen datos de comprobacion y estan ignorados por Git.
