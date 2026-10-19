@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use clap::{Parser, Subcommand, ValueEnum};
 use market_swarm::{
     connectors, evaluation,
-    inference::Inference,
+    inference::{select_openrouter_model, Inference},
     runtime,
     schema::{Evidence, Module, ResearchRequest},
     store::Store,
@@ -133,8 +133,7 @@ async fn inference(
     match mode {
         Mode::Offline => Ok(None),
         Mode::Openrouter => Ok(Some(
-            Inference::openrouter(model.context("Set --model or OPENROUTER_MODEL")?, timeout)
-                .await?,
+            Inference::openrouter(select_openrouter_model(model), timeout).await?,
         )),
         Mode::Local => Ok(Some(Inference::local(
             model.context("Local --model is required")?,
@@ -178,6 +177,7 @@ async fn execute() -> Result<()> {
                 &json!({"rust_runtime":true,"mirofish_dependency":false,"db_ready":true,"modules":Module::ALL,
                 "credentials":credentials,
                 "openrouter_model_configured":std::env::var("OPENROUTER_MODEL").ok().is_some_and(|s|!s.trim().is_empty()),
+                "effective_openrouter_model":select_openrouter_model(std::env::var("OPENROUTER_MODEL").ok()),
                 "integration_status":"Presence checks only; actor/schema and Investing provider still require source-specific live verification"}),
             )?;
         }

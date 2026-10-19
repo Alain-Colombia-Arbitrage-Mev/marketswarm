@@ -4,7 +4,9 @@ Fecha de trabajo: 2026-10-19, America/Bogota
 VERIFICADO EN EL CHECKOUT INDEPENDIENTE
 - cargo fmt --check: aprobado.
 - cargo clippy --locked --all-targets -- -D warnings: aprobado sin advertencias.
-- cargo test --locked: 25 pruebas de motor y 1 de servicio; 26 aprobadas.
+- cargo test --locked: 25 pruebas de motor y 2 de servicio; 27 aprobadas.
+- Seleccion predeterminada de nvidia/nemotron-3.5-super-vl, override por entorno
+  y error explicito sin credencial: verificados sin realizar llamadas de pago.
 - Prueba HTTP de contrato: 12 especialistas, critico y sintesis (14 llamadas);
   recuperacion posterior sin llamadas adicionales. Servidor artificial de prueba,
   no inferencia neuronal ni contacto con OpenRouter.
@@ -24,13 +26,13 @@ VERIFICADO EN EL CHECKOUT INDEPENDIENTE
   datos y solicitud; cambiar dependencias invalida resultados cacheados.
 - Revision del codigo para patrones de credenciales, archivos locales y rutas
   personales: sin coincidencias en la lista de archivos preparada para publicar.
-- .env.example contiene nombres de variables sin valores; se incluyo
-  SWARM_API_TOKEN para el servicio local.
+- .env.example deja vacias las credenciales y configura el modelo predeterminado
+  nvidia/nemotron-3.5-super-vl; incluye SWARM_API_TOKEN para el servicio local.
 - GitHub Actions configurado para Linux y macOS, con permisos contents:read.
   Su resultado remoto debe consultarse en la pestaña Actions del repositorio.
 
 REVISION DEL MOTOR COMPROBADA
-00622596dbd5ba1b640e62f423e312771c7e3d7013dbbebbcb90d5d17459e62d
+7d5268a3a3d68fff7dfbf3d0b71d2a6d8eda66df2dec9c5e8059806129255586
 
 ARTEFACTOS LOCALES
 state/ y output/ contienen datos de comprobacion y estan ignorados por Git.
@@ -38,7 +40,9 @@ Los ejemplos versionados son artificiales y estan identificados como tales.
 No se publican bases de datos, informes de trabajo, claves ni binarios.
 
 PENDIENTES DE VALIDACION EXTERNA
-- Credencial y modelo OpenRouter para inferencia real.
+- Credencial OpenRouter para inferencia real. Modelo ya seleccionado:
+  nvidia/nemotron-3.5-super-vl, verificado en el catalogo publico y compatible con
+  response_format. Disponibilidad no equivale a inferencia ejecutada.
 - Credencial, ID/dataset y esquema del actor Apify.
 - Proveedor, documentacion y credencial de Investing.
 - Credencial Brave para el conector de busqueda.

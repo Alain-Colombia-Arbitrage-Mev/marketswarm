@@ -7,6 +7,15 @@ use anyhow::{ensure, Context, Result};
 use reqwest::{Client, Url};
 use serde_json::{json, Value};
 
+pub const DEFAULT_OPENROUTER_MODEL: &str = "nvidia/nemotron-3.5-super-vl";
+
+pub fn select_openrouter_model(model: Option<String>) -> String {
+    model
+        .map(|value| value.trim().to_owned())
+        .filter(|value| !value.is_empty())
+        .unwrap_or_else(|| DEFAULT_OPENROUTER_MODEL.to_owned())
+}
+
 #[derive(Clone)]
 pub struct Inference {
     pub mode: String,

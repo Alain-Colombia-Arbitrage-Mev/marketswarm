@@ -16,8 +16,9 @@ investigación. El precio recomendado, la aceptación declarada y el pago observ
 se mantienen como resultados distintos.
 
 El runtime, los conectores y las simulaciones están escritos en Rust. La
-inferencia utiliza **OpenRouter** o un servidor local compatible con chat
-completions. MiroFish es una referencia conceptual; el proyecto funciona sin
+inferencia utiliza **OpenRouter**, con **`nvidia/nemotron-3.5-super-vl`** como modelo
+predeterminado para todos los especialistas, el crítico y la síntesis, o un
+servidor local compatible con chat completions. MiroFish es una referencia conceptual; el proyecto funciona sin
 MiroFish, OASIS, Zep ni Python como dependencias de ejecución.
 
 **Estado: versión inicial 0.1.0, CLI y API local.** El recorrido offline y los
@@ -75,7 +76,7 @@ no dan acceso a compras privadas de terceros.
 | Componente | Implementado | Límite actual |
 |---|---|---|
 | Swarm | 12 especialistas concurrentes → crítico → síntesis; selección explícita por consulta | Calidad semántica pendiente de evaluación con modelos y datos reales |
-| OpenRouter | Catálogo de modelos/precios, capacidades JSON, inferencia, reservas persistentes de coste, plazos y validación de citas | No se hizo inferencia real: falta credencial/modelo |
+| OpenRouter | Nemotron 3.5 Super VL predeterminado; catálogo, JSON, inferencia, reservas persistentes de coste y validación de citas | Disponibilidad verificada; falta credencial para ejecutar inferencia real |
 | Inferencia local | Adaptador loopback HTTP compatible; probado con servidor de contrato | No se instaló ni ejecutó un modelo neuronal local |
 | Memoria | SQLite, evidencia inmutable/versionada, tareas, eventos, resultados, grafo de citas, reanudación y exclusión mutua entre workers | No es un grafo semántico aprendido de entidades |
 | Fuentes públicas | Descarga HTTPS, extracción HTML/texto y registro de fuente/fecha/hash | Tablas complejas, PDFs e imágenes requieren importación de extractos atribuidos |
@@ -116,8 +117,11 @@ los agentes figuran como `not_run_offline`. El estudio WTP permanece `inconclusi
 Todos los datos de esa demostración son artificiales y están identificados.
 Los informes se guardan en `output/<run_id>/report.json` y `report.txt` y en SQLite.
 
-Para OpenRouter, configura `OPENROUTER_API_KEY` y `OPENROUTER_MODEL` en un archivo
-local ignorado o en el entorno del proceso. `.env.example` contiene solo nombres.
+Para OpenRouter, configura `OPENROUTER_API_KEY` en un archivo local ignorado o en
+el entorno del proceso. `OPENROUTER_MODEL` es opcional: el valor predeterminado es
+`nvidia/nemotron-3.5-super-vl`. Puedes cambiarlo con `--model` o con esa variable;
+la opción de línea de comandos tiene prioridad. `.env.example` incluye el modelo
+y deja vacías las credenciales.
 La carga de un archivo es explícita; las variables existentes tienen prioridad:
 
 ```sh
@@ -127,7 +131,12 @@ cargo run --locked -- --env-file .env --db state/demo.sqlite run examples/resear
 
 Esa última orden realiza llamadas al modelo seleccionado, con el presupuesto
 del request. El modelo debe admitir JSON `response_format`. La aplicación consulta
-el catálogo actual en lugar de fijar un nombre o precio potencialmente obsoleto.
+el catálogo actual para verificar disponibilidad, capacidades y precios.
+La selección de Nemotron se verificó en el catálogo de OpenRouter. Su razonamiento
+está activado por defecto en el proveedor y puede consumir parte del límite de
+salida: ajusta `limits.max_output_tokens` para dejar espacio a la respuesta JSON.
+El adaptador actual envía texto; seleccionar un modelo VL no añade por sí solo
+ingesta de imágenes o vídeo. La inferencia local sigue requiriendo `--model`.
 Las reservas conservadoras se retienen después de errores o resultados inciertos;
 no se reintentan POST automáticamente. El techo de precio por token se envía al
 proveedor. El gasto definitivo lo determina OpenRouter; un límite de gasto en la
@@ -254,6 +263,7 @@ Fuentes técnicas: [OpenRouter](https://openrouter.ai/docs/api_reference/overvie
 [routing y precios](https://openrouter.ai/docs/guides/routing/provider-selection),
 [datasets Apify](https://docs.apify.com/api/v2/dataset-items-get),
 [ejecución de actores](https://docs.apify.com/api/v2/actors-runs-post).
+Modelo seleccionado: [NVIDIA Nemotron 3.5 Super VL en OpenRouter](https://openrouter.ai/nvidia/nemotron-3.5-super-vl).
 
 ## Licencia
 

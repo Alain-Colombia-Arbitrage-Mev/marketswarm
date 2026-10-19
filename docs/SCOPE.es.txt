@@ -17,6 +17,7 @@ MiroFish sera una referencia conceptual; no sera dependencia de ejecucion.
 El sistema tendra modelos intercambiables por API y un adaptador de inferencia
 local. Ejecutar modelos por API no convierte su infraestructura en Rust.
 Proveedor inicial elegido por el usuario: OpenRouter; modelo configurable.
+Modelo predeterminado elegido por el usuario: nvidia/nemotron-3.5-super-vl.
 Un agente o unidad de analisis no equivale a una red neuronal entrenada.
 El alcance no presupone entrenar un modelo fundacional desde cero.
 

@@ -5,6 +5,58 @@ use tokio::{
 };
 
 #[tokio::test]
+async fn requested_default_model_is_used_without_sending_uncredentialed_requests() {
+    let temp = tempfile::tempdir().unwrap();
+    let binary = env!("CARGO_BIN_EXE_market-swarm");
+    let db = temp.path().join("model-default.sqlite");
+    let output = Command::new(binary)
+        .args(["--db", db.to_str().unwrap(), "doctor"])
+        .env_remove("OPENROUTER_MODEL")
+        .env_remove("OPENROUTER_API_KEY")
+        .output()
+        .await
+        .unwrap();
+    assert!(output.status.success());
+    let info: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(
+        info["effective_openrouter_model"],
+        "nvidia/nemotron-3.5-super-vl"
+    );
+    assert_eq!(info["credentials"]["OPENROUTER_API_KEY"], false);
+
+    let output = Command::new(binary)
+        .args(["--db", db.to_str().unwrap(), "doctor"])
+        .env("OPENROUTER_MODEL", "test/explicit-override")
+        .env_remove("OPENROUTER_API_KEY")
+        .output()
+        .await
+        .unwrap();
+    let info: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(info["effective_openrouter_model"], "test/explicit-override");
+
+    let fixture =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("examples/research.synthetic.json");
+    let output = Command::new(binary)
+        .args([
+            "--db",
+            db.to_str().unwrap(),
+            "run",
+            fixture.to_str().unwrap(),
+            "--mode",
+            "openrouter",
+        ])
+        .env_remove("OPENROUTER_MODEL")
+        .env_remove("OPENROUTER_API_KEY")
+        .output()
+        .await
+        .unwrap();
+    assert!(!output.status.success());
+    let error = String::from_utf8_lossy(&output.stderr);
+    assert!(error.contains("Missing server credential: OPENROUTER_API_KEY"));
+    assert!(!error.contains("Set --model"));
+}
+
+#[tokio::test]
 async fn authenticated_service_imports_runs_and_persists_reports() {
     let temp = tempfile::tempdir().unwrap();
     // Test-only credential, not a service or provider secret.
