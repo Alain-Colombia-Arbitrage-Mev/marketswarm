@@ -145,14 +145,20 @@ pub struct Limits {
     pub timeout_seconds: u64,
     pub max_output_tokens: u32,
     pub max_cost_usd: f64,
+    #[serde(default)]
+    pub reasoning_max_tokens: Option<u32>,
+    #[serde(default)]
+    pub reasoning_enabled: Option<bool>,
 }
 impl Default for Limits {
     fn default() -> Self {
         Self {
             concurrency: 3,
-            timeout_seconds: 90,
-            max_output_tokens: 1800,
+            timeout_seconds: 180,
+            max_output_tokens: 8192,
             max_cost_usd: 1.0,
+            reasoning_max_tokens: None,
+            reasoning_enabled: None,
         }
     }
 }
@@ -174,6 +180,16 @@ impl Limits {
             self.max_cost_usd.is_finite() && self.max_cost_usd > 0. && self.max_cost_usd <= 100.,
             "Invalid run budget"
         );
+        if let Some(reasoning) = self.reasoning_max_tokens {
+            ensure!(
+                self.reasoning_enabled != Some(false),
+                "Disabled reasoning cannot have a reasoning token budget"
+            );
+            ensure!(
+                reasoning >= 1024 && reasoning <= self.max_output_tokens.saturating_sub(512),
+                "Reasoning budget requires at least 1024 tokens and 512 remaining output tokens"
+            );
+        }
         Ok(())
     }
 }

@@ -13,6 +13,8 @@ async fn requested_default_model_is_used_without_sending_uncredentialed_requests
         .args(["--db", db.to_str().unwrap(), "doctor"])
         .env_remove("OPENROUTER_MODEL")
         .env_remove("OPENROUTER_API_KEY")
+        .env_remove("OPENROUTER_KEY")
+        .env_remove("openrouter_key")
         .output()
         .await
         .unwrap();
@@ -28,6 +30,8 @@ async fn requested_default_model_is_used_without_sending_uncredentialed_requests
         .args(["--db", db.to_str().unwrap(), "doctor"])
         .env("OPENROUTER_MODEL", "test/explicit-override")
         .env_remove("OPENROUTER_API_KEY")
+        .env_remove("OPENROUTER_KEY")
+        .env_remove("openrouter_key")
         .output()
         .await
         .unwrap();
@@ -47,6 +51,8 @@ async fn requested_default_model_is_used_without_sending_uncredentialed_requests
         ])
         .env_remove("OPENROUTER_MODEL")
         .env_remove("OPENROUTER_API_KEY")
+        .env_remove("OPENROUTER_KEY")
+        .env_remove("openrouter_key")
         .output()
         .await
         .unwrap();
@@ -54,6 +60,36 @@ async fn requested_default_model_is_used_without_sending_uncredentialed_requests
     let error = String::from_utf8_lossy(&output.stderr);
     assert!(error.contains("Missing server credential: OPENROUTER_API_KEY"));
     assert!(!error.contains("Set --model"));
+}
+
+#[tokio::test]
+async fn lowercase_openrouter_key_is_loaded_without_disclosing_it() {
+    let temp = tempfile::tempdir().unwrap();
+    let env_file = temp.path().join("alias.env");
+    let test_value = "test-only-credential-alias-not-a-real-provider-key";
+    std::fs::write(&env_file, format!("openrouter_key={test_value}\n")).unwrap();
+    let db = temp.path().join("alias.sqlite");
+    let output = Command::new(env!("CARGO_BIN_EXE_market-swarm"))
+        .args([
+            "--db",
+            db.to_str().unwrap(),
+            "--env-file",
+            env_file.to_str().unwrap(),
+            "doctor",
+        ])
+        .env_remove("OPENROUTER_API_KEY")
+        .env_remove("OPENROUTER_KEY")
+        .env_remove("openrouter_key")
+        .output()
+        .await
+        .unwrap();
+    assert!(output.status.success());
+    let text = String::from_utf8(output.stdout).unwrap();
+    let info: Value = serde_json::from_str(&text).unwrap();
+    assert_eq!(info["credentials"]["openrouter_key"], true);
+    assert_eq!(info["openrouter_credential_available"], true);
+    assert!(!text.contains(test_value));
+    assert!(!String::from_utf8_lossy(&output.stderr).contains(test_value));
 }
 
 #[tokio::test]

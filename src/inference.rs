@@ -27,6 +27,25 @@ pub struct Inference {
     completion_rate: f64,
     request_rate: f64,
     context_length: usize,
+    strict_schema: bool,
+}
+pub fn output_format(strict: bool) -> Value {
+    if !strict {
+        return json!({"type":"json_object"});
+    }
+    let strings = json!({"type":"array","items":{"type":"string"}});
+    json!({"type":"json_schema","json_schema":{"name":"research_agent_output","strict":true,"schema":{
+        "type":"object","additionalProperties":false,
+        "required":["summary","findings","hypotheses","gaps","next_experiments"],
+        "properties":{
+            "summary":{"type":"string"},
+            "findings":{"type":"array","items":{"type":"object","additionalProperties":false,
+                "required":["statement","evidence_ids","interpretation"],
+                "properties":{"statement":{"type":"string"},"evidence_ids":strings,
+                    "interpretation":{"type":"string","enum":["observation","inference","simulation"]}}}},
+            "hypotheses":strings,"gaps":strings,"next_experiments":strings
+        }
+    }}})
 }
 pub fn catalog_rates(entry: &Value) -> Result<(f64, f64, f64)> {
     let price = |name: &str| -> Result<f64> {
@@ -46,14 +65,14 @@ pub fn catalog_rates(entry: &Value) -> Result<(f64, f64, f64)> {
 }
 impl Inference {
     pub fn identity(&self) -> Value {
-        json!({"mode":self.mode,"model":self.model,"endpoint":self.endpoint.as_str()})
+        json!({"mode":self.mode,"model":self.model,"endpoint":self.endpoint.as_str(),"strict_schema":self.strict_schema})
     }
     pub async fn openrouter(model: String, timeout: u64) -> Result<Self> {
         ensure!(
             !model.trim().is_empty(),
             "Set OPENROUTER_MODEL or --model explicitly"
         );
-        let key = connectors::credential("OPENROUTER_API_KEY")?;
+        let key = connectors::openrouter_credential()?;
         let client = connectors::client(timeout)?;
         let catalog = connectors::get_json(
             &client,
@@ -83,6 +102,9 @@ impl Inference {
         let context_length = entry["context_length"]
             .as_u64()
             .context("Missing model context size")? as usize;
+        let strict_schema = supported
+            .iter()
+            .any(|v| v.as_str() == Some("structured_outputs"));
         Ok(Self {
             mode: "openrouter".into(),
             model,
@@ -93,6 +115,7 @@ impl Inference {
             completion_rate,
             request_rate,
             context_length,
+            strict_schema,
         })
     }
     pub fn local(model: String, endpoint: &str, timeout: u64) -> Result<Self> {
@@ -115,6 +138,7 @@ impl Inference {
             completion_rate: 0.,
             request_rate: 0.,
             context_length: 32768,
+            strict_schema: false,
         })
     }
     pub fn system(role: &str, brief: &str) -> String {
@@ -123,6 +147,10 @@ impl Inference {
             Cite only supplied evidence IDs. Distinguish observation, inference and simulation.\n\
             Do not invent sources, metrics, transactions or demographics. Do not declare WTP validated.\n\
             A finding must have at least one evidence ID. Missing evidence belongs in gaps.\n\
+            Be concise: prioritize at most five findings and five next experiments.\n\
+            Preserve exact metric name, denominator, category, period and geography. Plan-duration share is NOT retention; trial starts are NOT paid conversions.\n\
+            You only see selected excerpts: say 'not present in the supplied excerpts', never assert absence from the full source.\n\
+            If your specialty has no relevant data, return gaps rather than relabelling another domain's analysis.\n\
             Return ONLY a JSON object with exactly these fields: summary (string), findings (array of\n\
             {{statement:string,evidence_ids:string[],interpretation:'observation'|'inference'|'simulation'}}),\n\
             hypotheses (string[]), gaps (string[]), next_experiments (string[]).")
@@ -138,7 +166,8 @@ impl Inference {
         let user = serde_json::to_string(payload)?;
         // Conservative text token allowance, also sent as a provider-enforced
         // unit-price ceiling. Retain reservations after unknown/failed outcomes.
-        let input_allowance = system.len() + user.len() + 2048;
+        let format = output_format(self.strict_schema);
+        let input_allowance = system.len() + user.len() + serde_json::to_vec(&format)?.len() + 2048;
         ensure!(
             input_allowance + limits.max_output_tokens as usize <= self.context_length,
             "Prompt exceeds conservative model context allowance; reduce evidence/context"
@@ -149,7 +178,13 @@ impl Inference {
             * 1.06;
         store.reserve(run, reservation, limits.max_cost_usd)?;
         let mut body = json!({"model":self.model,"messages":[{"role":"system","content":system},{"role":"user","content":user}],
-            "response_format":{"type":"json_object"},"max_tokens":limits.max_output_tokens,"temperature":0.2,"stream":false});
+            "response_format":format,"max_tokens":limits.max_output_tokens,"temperature":0.2,"stream":false});
+        if let Some(tokens) = limits.reasoning_max_tokens {
+            body["reasoning"] = json!({"max_tokens":tokens,"exclude":true});
+        }
+        if let Some(enabled) = limits.reasoning_enabled {
+            body["reasoning"]["enabled"] = json!(enabled);
+        }
         if self.mode == "openrouter" {
             body["provider"] = json!({"require_parameters":true,"sort":"price",
                 "max_price":{"prompt":self.prompt_rate * 1e6,"completion":self.completion_rate * 1e6,"request":self.request_rate}});
@@ -172,6 +207,28 @@ impl Inference {
             value.get("error").is_none(),
             "Inference returned an error (details redacted)"
         );
+        let usage = value
+            .get("usage")
+            .cloned()
+            .unwrap_or(json!({"unknown":true}));
+        store.capture_response(
+            run,
+            &json!({"response_id":value["id"],"model":value["model"],
+            "usage":usage,"finish_reason":value.pointer("/choices/0/finish_reason"),
+            "content":value.pointer("/choices/0/message/content"),
+            "prompt_hash":crate::digest(serde_json::to_vec(&(system,payload))?.as_slice())}),
+        )?;
+        if let Some(cost) = usage.get("cost").and_then(Value::as_f64) {
+            ensure!(
+                cost.is_finite() && cost >= 0.,
+                "Invalid reported inference cost"
+            );
+            if cost > reservation + 1e-9 {
+                let remaining = (limits.max_cost_usd - store.reserved(run)?).max(0.);
+                store.reserve(run, remaining, limits.max_cost_usd)?;
+                anyhow::bail!("Provider exceeded conservative cost reservation; further spending disabled for this run");
+            }
+        }
         ensure!(
             value
                 .pointer("/choices/0/finish_reason")
@@ -185,22 +242,6 @@ impl Inference {
             .context("Inference is missing message content")?;
         let output: AgentOutput = serde_json::from_str(content)
             .context("Inference did not match AgentOutput JSON contract")?;
-        let usage = value
-            .get("usage")
-            .cloned()
-            .unwrap_or(json!({"unknown":true}));
-        if let Some(cost) = usage.get("cost").and_then(Value::as_f64) {
-            ensure!(
-                cost.is_finite() && cost >= 0.,
-                "Invalid reported inference cost"
-            );
-            if cost > reservation + 1e-9 {
-                // Account for unexpected charges and prevent further dispatch.
-                let remaining = (limits.max_cost_usd - store.reserved(run)?).max(0.);
-                store.reserve(run, remaining, limits.max_cost_usd)?;
-                anyhow::bail!("Provider exceeded conservative cost reservation; further spending disabled for this run");
-            }
-        }
         Ok((
             output,
             json!({"provider_usage":usage,"reserved_usd":reservation,"response_id":value["id"],"returned_model":value["model"]}),

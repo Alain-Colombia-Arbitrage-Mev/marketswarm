@@ -157,6 +157,14 @@ fn safe_failure(error: &anyhow::Error) -> String {
         "Context allowance exceeded; reduce evidence selection".into()
     } else if s.contains("HTTP") {
         "Provider HTTP failure; inspect service status and configuration".into()
+    } else if [
+        "Inference did not finish normally; partial answer rejected",
+        "Inference did not match AgentOutput JSON contract",
+        "Inference is missing message content",
+    ]
+    .contains(&s.as_str())
+    {
+        s
     } else {
         "Inference failed, returned invalid/truncated output, or exceeded cost policy; reservation retained".into()
     }

@@ -22,7 +22,8 @@ servidor local compatible con chat completions. MiroFish es una referencia conce
 MiroFish, OASIS, Zep ni Python como dependencias de ejecución.
 
 **Estado: versión inicial 0.1.0, CLI y API local.** El recorrido offline y los
-contratos HTTP tienen pruebas automatizadas. La calidad predictiva, la WTP de
+contratos HTTP tienen pruebas automatizadas; también se ejecutó una investigación
+real con Nemotron y publicaciones de RevenueCat/Superwall. La calidad predictiva, la WTP de
 clientes y los conectores de cuentas privadas requieren validación con sus datos
 reales. Consulta el [alcance completo](docs/SCOPE.es.txt) y la
 [verificación](VERIFICATION.txt).
@@ -75,8 +76,8 @@ no dan acceso a compras privadas de terceros.
 
 | Componente | Implementado | Límite actual |
 |---|---|---|
-| Swarm | 12 especialistas concurrentes → crítico → síntesis; selección explícita por consulta | Calidad semántica pendiente de evaluación con modelos y datos reales |
-| OpenRouter | Nemotron 3.5 Super VL predeterminado; catálogo, JSON, inferencia, reservas persistentes de coste y validación de citas | Disponibilidad verificada; falta credencial para ejecutar inferencia real |
+| Swarm | 12 especialistas concurrentes → crítico → síntesis; selección explícita por consulta | Prueba real exploratoria; calidad semántica pendiente de evaluación sistemática |
+| OpenRouter | Nemotron 3.5 Super VL predeterminado; catálogo, JSON, inferencia, reservas persistentes de coste y validación de citas | Inferencia real ejecutada; contratos válidos no garantizan conclusiones correctas |
 | Inferencia local | Adaptador loopback HTTP compatible; probado con servidor de contrato | No se instaló ni ejecutó un modelo neuronal local |
 | Memoria | SQLite, evidencia inmutable/versionada, tareas, eventos, resultados, grafo de citas, reanudación y exclusión mutua entre workers | No es un grafo semántico aprendido de entidades |
 | Fuentes públicas | Descarga HTTPS, extracción HTML/texto y registro de fuente/fecha/hash | Tablas complejas, PDFs e imágenes requieren importación de extractos atribuidos |
@@ -118,7 +119,10 @@ Todos los datos de esa demostración son artificiales y están identificados.
 Los informes se guardan en `output/<run_id>/report.json` y `report.txt` y en SQLite.
 
 Para OpenRouter, configura `OPENROUTER_API_KEY` en un archivo local ignorado o en
-el entorno del proceso. `OPENROUTER_MODEL` es opcional: el valor predeterminado es
+el entorno del proceso. También se aceptan `OPENROUTER_KEY` y `openrouter_key`,
+en ese orden de prioridad después de `OPENROUTER_API_KEY`; los valores vacíos se
+omiten. `doctor` muestra si existe alguna credencial utilizable sin revelar su
+contenido. `OPENROUTER_MODEL` es opcional: el valor predeterminado es
 `nvidia/nemotron-3.5-super-vl`. Puedes cambiarlo con `--model` o con esa variable;
 la opción de línea de comandos tiene prioridad. `.env.example` incluye el modelo
 y deja vacías las credenciales.
@@ -135,6 +139,20 @@ el catálogo actual para verificar disponibilidad, capacidades y precios.
 La selección de Nemotron se verificó en el catálogo de OpenRouter. Su razonamiento
 está activado por defecto en el proveedor y puede consumir parte del límite de
 salida: ajusta `limits.max_output_tokens` para dejar espacio a la respuesta JSON.
+Los valores predeterminados y el ejemplo reservan hasta 8192 tokens de salida y
+180 segundos por etapa; la reserva no equivale al uso facturado.
+`limits.reasoning_max_tokens` permite solicitar un presupuesto de razonamiento
+opcional (mínimo 1024 y al menos 512 tokens restantes para salida). Su aplicación
+depende del modelo/proveedor; el límite total sigue siendo `max_output_tokens`.
+`limits.reasoning_enabled=false` solicita desactivar ese razonamiento interno;
+el ejemplo lo usa para limitar latencia. Esto sigue ejecutando el LLM. No lo
+combines con `reasoning_max_tokens`. Omite ambas opciones para usar la
+configuración del proveedor o usa `true` para solicitar razonamiento.
+Cuando el catálogo anuncia `structured_outputs`, se solicita un esquema JSON
+estricto. El modo compatible conserva `json_object` y validación local.
+SQLite guarda el contenido devuelto, ID de respuesta, uso y hash del prompt antes
+de rechazar una respuesta truncada o inválida; estos registros locales permiten
+auditar llamadas facturadas que no produjeron un resultado utilizable.
 El adaptador actual envía texto; seleccionar un modelo VL no añade por sí solo
 ingesta de imágenes o vídeo. La inferencia local sigue requiriendo `--model`.
 Las reservas conservadoras se retienen después de errores o resultados inciertos;
@@ -233,6 +251,12 @@ Un lease evita que dos workers ejecuten la misma corrida simultáneamente; tras
 una interrupción forzosa expira dentro del plazo registrado. `report RUN_ID`
 recupera un resultado sin inferencia ni gasto adicional.
 
+Los agentes reciben extractos seleccionados de cada documento largo (unos 2200
+caracteres), no todo el texto almacenado. La selección usa coincidencias con la
+consulta; puede omitir regiones, tablas o condiciones relevantes. Una cita prueba
+que la fuente existe, no que la afirmación sea correcta: revisa métricas y
+denominadores contra la fuente antes de tomar decisiones.
+
 ```sh
 cargo run --locked -- --env-file .env serve --port 8787 --mode openrouter
 ```
@@ -258,6 +282,8 @@ usa predicciones anteriores a resultados reales, casos pareados, población y
 presupuesto comparables, conjunto reservado y control de dependencia temporal.
 Las pruebas HTTP locales usan un servidor de contrato explícitamente artificial;
 no se presentan como ejecución de OpenRouter o de un modelo neuronal.
+La [prueba real del 19 de octubre de 2026](docs/LIVE_ANALYSIS_2026-10-19.es.txt)
+documenta los intentos, los errores detectados y el alcance de la revisión.
 
 Fuentes técnicas: [OpenRouter](https://openrouter.ai/docs/api_reference/overview),
 [routing y precios](https://openrouter.ai/docs/guides/routing/provider-selection),

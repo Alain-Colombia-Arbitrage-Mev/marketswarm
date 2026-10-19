@@ -21,6 +21,7 @@ impl Store {
             CREATE TABLE IF NOT EXISTS tasks (run_id TEXT NOT NULL, role TEXT NOT NULL, body TEXT NOT NULL, PRIMARY KEY(run_id,role));
             CREATE TABLE IF NOT EXISTS events (seq INTEGER PRIMARY KEY AUTOINCREMENT, run_id TEXT NOT NULL, at TEXT NOT NULL, body TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS leases (run_id TEXT PRIMARY KEY, owner TEXT NOT NULL, expires INTEGER NOT NULL);
+            CREATE TABLE IF NOT EXISTS inference_responses (seq INTEGER PRIMARY KEY AUTOINCREMENT, run_id TEXT NOT NULL, at TEXT NOT NULL, body TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS budget (run_id TEXT PRIMARY KEY, reserved REAL NOT NULL);")?;
         Ok(s)
     }
@@ -94,6 +95,17 @@ impl Store {
         self.conn()?.execute(
             "INSERT OR REPLACE INTO tasks VALUES (?,?,?)",
             params![run, result.role, serde_json::to_string(result)?],
+        )?;
+        Ok(())
+    }
+    pub fn capture_response(&self, run: &str, response: &serde_json::Value) -> Result<()> {
+        self.conn()?.execute(
+            "INSERT INTO inference_responses (run_id,at,body) VALUES (?,?,?)",
+            params![
+                run,
+                Utc::now().to_rfc3339(),
+                serde_json::to_string(response)?
+            ],
         )?;
         Ok(())
     }

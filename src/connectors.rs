@@ -97,6 +97,14 @@ pub fn credential(name: &str) -> Result<String> {
         .filter(|v| !v.trim().is_empty())
         .ok_or_else(|| anyhow::anyhow!("Missing server credential: {name}"))
 }
+pub fn openrouter_credential() -> Result<String> {
+    for name in ["OPENROUTER_API_KEY", "OPENROUTER_KEY", "openrouter_key"] {
+        if let Ok(key) = credential(name) {
+            return Ok(key);
+        }
+    }
+    bail!("Missing server credential: OPENROUTER_API_KEY (also accepts OPENROUTER_KEY or openrouter_key)")
+}
 pub async fn public_document(url: &str) -> Result<Evidence> {
     let url = safe_reference(url)?;
     let now = Utc::now();

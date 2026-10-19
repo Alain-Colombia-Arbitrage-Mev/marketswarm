@@ -159,6 +159,8 @@ async fn execute() -> Result<()> {
         Command::Doctor => {
             let credentials = [
                 "OPENROUTER_API_KEY",
+                "OPENROUTER_KEY",
+                "openrouter_key",
                 "APIFY_API_TOKEN",
                 "APIFY_TOKEN",
                 "INVESTING_API_KEY",
@@ -178,6 +180,7 @@ async fn execute() -> Result<()> {
                 "credentials":credentials,
                 "openrouter_model_configured":std::env::var("OPENROUTER_MODEL").ok().is_some_and(|s|!s.trim().is_empty()),
                 "effective_openrouter_model":select_openrouter_model(std::env::var("OPENROUTER_MODEL").ok()),
+                "openrouter_credential_available":connectors::openrouter_credential().is_ok(),
                 "integration_status":"Presence checks only; actor/schema and Investing provider still require source-specific live verification"}),
             )?;
         }

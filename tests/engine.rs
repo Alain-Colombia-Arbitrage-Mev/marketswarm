@@ -528,6 +528,76 @@ async fn all_twelve_modules_run_offline_without_claiming_neural_activity() {
     let persisted = s.report(&report.run_id).unwrap().unwrap();
     assert_eq!(persisted["run_id"], report.run_id);
 }
+#[test]
+fn reasoning_budget_preserves_room_for_visible_output_without_overflow() {
+    let mut limits = Limits {
+        max_output_tokens: 4096,
+        reasoning_max_tokens: Some(1024),
+        ..Limits::default()
+    };
+    assert!(limits.validate().is_ok());
+    for invalid in [0, 1023, 4096, u32::MAX] {
+        limits.reasoning_max_tokens = Some(invalid);
+        assert!(limits.validate().is_err());
+    }
+    limits.reasoning_max_tokens = Some(1024);
+    limits.reasoning_enabled = Some(false);
+    assert!(limits.validate().is_err());
+}
+#[tokio::test]
+async fn rejected_completion_preserves_billed_usage_and_raw_content() {
+    let app = axum::Router::new().route(
+        "/v1/chat/completions",
+        axum::routing::post(
+            |axum::Json(body): axum::Json<serde_json::Value>| async move {
+                assert_eq!(body["reasoning"]["enabled"], false);
+                axum::Json(json!({"id":"truncated-test","model":"test-local",
+                "choices":[{"finish_reason":"length","message":{"content":"{\"summary\":"}}],
+                "usage":{"total_tokens":256,"cost":0.0}}))
+            },
+        ),
+    );
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let server = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+    let d = tempfile::tempdir().unwrap();
+    let path = d.path().join("db");
+    let store = Store::open(&path).unwrap();
+    let model = Inference::local(
+        "test-local".into(),
+        &format!("http://{address}/v1/chat/completions"),
+        10,
+    )
+    .unwrap();
+    let error = model
+        .complete(
+            "test",
+            &json!({}),
+            &Limits {
+                reasoning_enabled: Some(false),
+                ..Limits::default()
+            },
+            &store,
+            "receipt-test",
+        )
+        .await
+        .unwrap_err();
+    assert!(error.to_string().contains("partial answer rejected"));
+    let conn = rusqlite::Connection::open(path).unwrap();
+    let body: String = conn
+        .query_row(
+            "SELECT body FROM inference_responses WHERE run_id=?",
+            ["receipt-test"],
+            |row| row.get(0),
+        )
+        .unwrap();
+    let receipt: serde_json::Value = serde_json::from_str(&body).unwrap();
+    assert_eq!(receipt["response_id"], "truncated-test");
+    assert_eq!(receipt["usage"]["total_tokens"], 256);
+    assert_eq!(receipt["content"], "{\"summary\":");
+    assert_eq!(receipt["finish_reason"], "length");
+    server.abort();
+}
 #[tokio::test]
 async fn local_inference_executes_fourteen_stages_and_replays_without_new_calls() {
     let count = Arc::new(AtomicUsize::new(0));

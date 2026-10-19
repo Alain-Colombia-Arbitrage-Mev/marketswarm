@@ -1,0 +1,111 @@
+MARKETSWARM - PRUEBA REAL DE ANALISIS
+Fecha: 2026-10-19, America/Bogota
+Modelo solicitado y devuelto: nvidia/nemotron-3.5-super-vl, via OpenRouter.
+
+CASO Y FUENTES
+Concepto hipotetico de app de audio guiado, con Colombia/LATAM como audiencia
+propuesta. No se usaron clientes, opiniones ni transacciones reales de producto.
+Se importaron y persistieron tres publicaciones reales, como evidencia benchmark:
+- https://www.revenuecat.com/state-of-subscription-apps
+- https://superwall.com/case-studies
+- https://superwall.com/docs/dashboard/dashboard-campaigns/campaigns-understanding-experiment-results
+Las fuentes tienen fecha de captura; su fecha de publicacion no esta verificada.
+El contenido almacenado de RevenueCat esta limitado a 70000 caracteres y cada
+agente recibe extractos seleccionados, no una lectura exhaustiva de la fuente.
+
+PRIMER INTENTO, CONSERVADO
+Run: 87f82b6b6d8601f91bd379aaf9aac4f0207ff81c20f6f2d785c3bcc7eccd8eda
+Estado partial: 11 especialistas y sintesis completados; sentimiento y critico
+fallaron. El error anterior no preservaba el detalle suficiente para distinguir
+truncamiento y contrato JSON invalido, por lo que no se atribuye una causa exacta.
+Coste informado por las 12 respuestas aceptadas: USD 0.034002342.
+Reservas conservadoras, incluidos los dos fallos: USD 0.082478706.
+No se conoce aqui la facturacion de esos dos fallos; las reservas se conservaron.
+
+SEGUNDO INTENTO, JSON ESTRICTO Y RAZONAMIENTO SOLICITADO DE 1024 TOKENS
+Run: 491dd1cc50adefc14b9b5df859d928f82b390b0c36f77e3da5166c00cfd69457
+Estado partial: los 12 especialistas y la sintesis completaron; el critico agoto
+el plazo de 180 segundos. El proveedor reporto entre 3119 y 5553 tokens de
+razonamiento en los especialistas, superando el presupuesto solicitado.
+Coste informado en los 13 recibos: USD 0.034171137.
+Reserva conservadora: USD 0.082597956.
+La factura del critico tras el timeout es desconocida; su reserva se conserva.
+Revision del motor de esta repeticion: 25ccbaf58a7fed8a2c81787a5795ced29b0342ba46468ec2bf61933e41f9d2b7.
+
+TERCER INTENTO, COMPLETO, RAZONAMIENTO INTERNO DESACTIVADO
+Run: 347ad9a98c79f4ce7e3ff12bf520d66a02b1ed7061b5016bd19bf096e838dbc0
+Estado completed: 12 especialistas, critico y sintesis completados (14/14).
+Se uso reasoning_enabled=false, JSON estricto y max_output_tokens=8192.
+Los 14 recibos tienen IDs distintos, modelo devuelto igual al solicitado y cero
+reasoning_tokens. Coste informado de esta corrida: USD 0.014926824.
+Reserva conservadora de esta corrida: USD 0.082997894.
+Duracion aproximada: 104 segundos. Lectura posterior del informe desde SQLite
+sin llamada adicional al modelo: verificada.
+Revision del motor: 5732d777d007bd949e3aef836a578f6f6f4f06e2cc1ec720be9506b618da34ec.
+
+Las reservas de los tres intentos suman USD 0.248074556, dentro del techo total
+local de USD 0.25. El coste conocido en respuestas aceptadas/recibos es
+USD 0.083100303; la factura de los tres fallos anteriores es desconocida.
+No se presenta el coste conocido como factura total de la cuenta.
+
+CAMBIOS MOTIVADOS POR LA PRUEBA
+- Se acepta openrouter_key, ademas de OPENROUTER_API_KEY y OPENROUTER_KEY.
+- Se solicita JSON Schema estricto cuando el catalogo anuncia soporte.
+- Se guardan ID, modelo, uso, contenido devuelto y hash de prompt antes de
+  rechazar una respuesta incompleta o incompatible. Sin claves ni cabeceras.
+- Los errores de contenido, truncamiento y contrato tienen mensajes distintos.
+- El prompt exige conservar metrica, denominador, categoria, periodo y geografia,
+  y distinguir ausencia en extractos de ausencia en el documento completo.
+- Limites predeterminados: 8192 tokens totales de salida y 180 s por etapa.
+- reasoning_max_tokens permite solicitar un presupuesto de razonamiento, sin
+  prometer su aplicacion por el proveedor. En la repeticion se solicitaron 1024,
+  pero varias respuestas reportaron mas de 3000 tokens de razonamiento. El
+  limite total max_output_tokens y las reservas siguen siendo independientes.
+- reasoning_enabled=false permite solicitar desactivar el razonamiento interno
+  sin dejar de ejecutar el LLM. El ejemplo usa esta configuracion; no puede
+  combinarse con un presupuesto positivo de razonamiento.
+
+REVISION SEMANTICA Y LIMITES
+Una referencia existente y un JSON valido no certifican que una afirmacion sea
+verdadera. El primer intento llamo al 68% de adopcion anual de Health & Fitness
+"retencion anual" en una inferencia; no es la misma metrica. En los hallazgos de
+pricing de la repeticion se conserva como mezcla de duracion de plan.
+
+La primera sintesis afirmaba que las fuentes no tienen desglose geografico; el
+documento almacenado de RevenueCat si contiene secciones geograficas. Un vacio
+de los extractos no demuestra ausencia en el documento. Esta limitacion debe
+acompanar cualquier informe y exige recuperar las secciones necesarias.
+
+La repeticion aun contiene formulaciones que requieren revision: una hipotesis
+de WTP cambia conversion de prueba a pago por conversion a inicio de prueba.
+Varias frases llaman "mayoria" al Dia 0 cuando algunas proporciones son menores
+del 50%; debe distinguirse el dia mas frecuente de una mayoria absoluta y
+preservar como denominador las cancelaciones, no todos los inicios de prueba.
+El prompt mas preciso reduce algunos errores; no garantiza eliminarlos.
+
+El texto de RevenueCat recuperado incluye cifras distintas para ingresos
+mensuales de Productivity (91% en un pasaje y 77% en otro). Debe revisarse contra
+la tabla original antes de usar cualquiera de esas cifras en una decision.
+El critico del ultimo intento repite varios benchmarks y no detecta esa
+contradiccion de la fuente completa. Su presencia no sustituye la revision
+humana ni demuestra que el swarm mejore el resultado de un solo agente.
+La salida final de sintesis coincide con la del critico pese a tener un ID de
+llamada distinto; no constituye corroboracion independiente.
+
+El modulo financiero repite benchmarks de suscripciones sin datos OHLCV; su
+respuesta valida el recorrido de software, no un analisis de activos financieros.
+No se evalua sentimiento real sin comentarios de usuarios. Las propuestas de
+experimentos son borradores: requieren definir efecto minimo, potencia, ventanas
+de maduracion y regla de parada antes del lanzamiento. Que un intervalo incluya
+cero no es, por si solo, una regla de parada de un experimento secuencial.
+
+No se ha validado WTP ni elegido un precio optimo. El caso no aporta un estudio
+humano ni pagos observados de la oferta. La prueba tampoco compara precision
+predictiva frente a un agente, baseline o MiroFish. Los agentes comparten modelo
+y extractos: su acuerdo puede repetir errores correlacionados.
+
+ARTEFACTOS
+SQLite: state/nemotron-live.sqlite
+Solicitudes, fuentes e informes: output/nemotron-live/
+Ambas rutas estan ignoradas. Este documento publica solamente la verificacion,
+sin credenciales, bases locales ni texto completo de publicaciones de terceros.

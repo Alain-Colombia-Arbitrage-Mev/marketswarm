@@ -4,9 +4,14 @@ Fecha de trabajo: 2026-10-19, America/Bogota
 VERIFICADO EN EL CHECKOUT INDEPENDIENTE
 - cargo fmt --check: aprobado.
 - cargo clippy --locked --all-targets -- -D warnings: aprobado sin advertencias.
-- cargo test --locked: 25 pruebas de motor y 2 de servicio; 27 aprobadas.
-- Seleccion predeterminada de nvidia/nemotron-3.5-super-vl, override por entorno
-  y error explicito sin credencial: verificados sin realizar llamadas de pago.
+- cargo test --locked: 27 pruebas de motor y 3 de servicio; 30 aprobadas.
+- Seleccion predeterminada de nvidia/nemotron-3.5-super-vl, override por entorno,
+  alias openrouter_key cargado desde archivo local sin revelar su contenido,
+  error explicito sin credencial y recibos tras respuestas truncadas: aprobados.
+- Inferencia real con OpenRouter y fuentes publicas de RevenueCat/Superwall:
+  14/14 etapas completadas con razonamiento interno desactivado y USD 0.014926824
+  informados en esa corrida. Dos intentos anteriores parciales estan conservados;
+  detalles y revision semantica en docs/LIVE_ANALYSIS_2026-10-19.es.txt.
 - Prueba HTTP de contrato: 12 especialistas, critico y sintesis (14 llamadas);
   recuperacion posterior sin llamadas adicionales. Servidor artificial de prueba,
   no inferencia neuronal ni contacto con OpenRouter.
@@ -32,7 +37,7 @@ VERIFICADO EN EL CHECKOUT INDEPENDIENTE
   Su resultado remoto debe consultarse en la pestaña Actions del repositorio.
 
 REVISION DEL MOTOR COMPROBADA
-7d5268a3a3d68fff7dfbf3d0b71d2a6d8eda66df2dec9c5e8059806129255586
+5732d777d007bd949e3aef836a578f6f6f4f06e2cc1ec720be9506b618da34ec
 
 ARTEFACTOS LOCALES
 state/ y output/ contienen datos de comprobacion y estan ignorados por Git.
@@ -40,9 +45,6 @@ Los ejemplos versionados son artificiales y estan identificados como tales.
 No se publican bases de datos, informes de trabajo, claves ni binarios.
 
 PENDIENTES DE VALIDACION EXTERNA
-- Credencial OpenRouter para inferencia real. Modelo ya seleccionado:
-  nvidia/nemotron-3.5-super-vl, verificado en el catalogo publico y compatible con
-  response_format. Disponibilidad no equivale a inferencia ejecutada.
 - Credencial, ID/dataset y esquema del actor Apify.
 - Proveedor, documentacion y credencial de Investing.
 - Credencial Brave para el conector de busqueda.
@@ -50,7 +52,7 @@ PENDIENTES DE VALIDACION EXTERNA
 - Evaluacion predictiva con datos reservados/posteriores y calibracion empirica.
 - Ajuste conjoint y grafo semantico de entidades: pendientes de implementacion.
 
-No se realizaron llamadas de inferencia de pago, ejecuciones de actores de
-Apify, publicaciones sociales ni operaciones financieras en esta verificacion.
+Se realizaron llamadas de inferencia de pago mediante OpenRouter. No se
+ejecutaron actores de Apify, publicaciones sociales ni operaciones financieras.
 La publicacion del codigo no acredita WTP humana, rentabilidad ni superioridad
 predictiva del swarm. Capacidades y limites se detallan en README.md.
