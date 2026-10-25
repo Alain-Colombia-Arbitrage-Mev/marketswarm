@@ -1,7 +1,9 @@
 pub mod analysis;
+pub mod base64;
 pub mod connectors;
 pub mod evaluation;
 pub mod inference;
+pub mod mcp;
 pub mod runtime;
 pub mod schema;
 pub mod store;

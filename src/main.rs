@@ -3,8 +3,9 @@ use clap::{Parser, Subcommand, ValueEnum};
 use market_swarm::{
     connectors, evaluation,
     inference::{select_openrouter_model, Inference},
+    mcp::Mcp,
     runtime,
-    schema::{Evidence, Module, ResearchRequest},
+    schema::{Evidence, EvidenceKind, Limits, Module, ResearchRequest},
     store::Store,
 };
 use serde::de::DeserializeOwned;
@@ -32,6 +33,12 @@ enum Mode {
     Openrouter,
     Local,
     Offline,
+}
+#[derive(Clone, Copy, Debug, ValueEnum)]
+enum McpAction {
+    Initialize,
+    ListTools,
+    Call,
 }
 #[derive(Subcommand)]
 enum Command {
@@ -92,6 +99,29 @@ enum Command {
         local_url: String,
         #[arg(long, default_value = "output")]
         output: PathBuf,
+    },
+    Describe {
+        files: Vec<PathBuf>,
+        #[arg(long, default_value = "Describe each supplied app screenshot: what it shows, all visible text, and any UX or conversion problems.")]
+        prompt: String,
+        #[arg(long, value_enum, default_value = "openrouter")]
+        mode: Mode,
+        #[arg(long, env = "OPENROUTER_MODEL")]
+        model: Option<String>,
+        #[arg(long, default_value = "http://127.0.0.1:11434/v1/chat/completions")]
+        local_url: String,
+        #[arg(long)]
+        import: bool,
+    },
+    Mcp {
+        #[arg(long)]
+        command: String,
+        #[arg(long)]
+        tool: Option<String>,
+        #[arg(long)]
+        args: Option<String>,
+        #[arg(long, value_enum, default_value = "list-tools")]
+        action: McpAction,
     },
     Report {
         run_id: String,
@@ -286,6 +316,117 @@ async fn execute() -> Result<()> {
                 &json!({"run_id":report.run_id,"status":report.status,"agents":report.agents.len(),"reserved_cost_usd":report.reserved_cost_usd,"report_json":dir.join("report.json"),"report_text":dir.join("report.txt")}),
             )?;
         }
+        Command::Describe {
+            files,
+            prompt,
+            mode,
+            model,
+            local_url,
+            import,
+        } => {
+            anyhow::ensure!(
+                !files.is_empty() && files.len() <= 20,
+                "Provide 1..20 image files"
+            );
+            let mut images = Vec::new();
+            for path in &files {
+                let bytes = std::fs::read(path)
+                    .with_context(|| format!("Cannot read image file: {}", path.display()))?;
+                anyhow::ensure!(bytes.len() <= 8_000_000, "Image exceeds 8 MB");
+                let ext = path
+                    .extension()
+                    .and_then(|e| e.to_str())
+                    .unwrap_or("")
+                    .to_ascii_lowercase();
+                let mime = match ext.as_str() {
+                    "png" => "image/png",
+                    "jpg" | "jpeg" => "image/jpeg",
+                    "webp" => "image/webp",
+                    "gif" => "image/gif",
+                    other => anyhow::bail!("Unsupported image extension: {other}"),
+                };
+                images.push((mime.to_owned(), bytes));
+            }
+            let provider = inference(mode, model, &local_url, 90)
+                .await?
+                .context("Image description requires a live model (openrouter or local)")?;
+            let limits = Limits {
+                max_output_tokens: 4096,
+                ..Default::default()
+            };
+            let run = format!(
+                "describe-{}",
+                &market_swarm::digest(
+                    format!(
+                        "{:?}|{prompt}",
+                        std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .map(|d| d.as_nanos())
+                            .unwrap_or_default()
+                    )
+                    .as_bytes()
+                )[..24]
+            );
+            store.start(
+                &run,
+                &serde_json::to_string(&json!({
+                    "prompt": prompt,
+                    "files": files.iter().map(|p| p.display().to_string()).collect::<Vec<_>>()
+                }))?,
+            )?;
+            let description = provider
+                .describe_images(&prompt, &images, &limits, &store, &run)
+                .await?;
+            if import {
+                let content = serde_json::to_string(&description)?;
+                let now = chrono::Utc::now();
+                let evidence = Evidence {
+                    id: format!("vision-{}", &market_swarm::digest(content.as_bytes())[..24]),
+                    source: files
+                        .iter()
+                        .map(|p| p.display().to_string())
+                        .collect::<Vec<_>>()
+                        .join(", "),
+                    provider: "vision_ocr".into(),
+                    kind: EvidenceKind::Simulated,
+                    published_at: None,
+                    collected_at: now,
+                    observed_at: now,
+                    segment: None,
+                    population: None,
+                    content,
+                    limitations: vec!["Synthetic vision/OCR description of supplied screenshots; not independent human observation.".into()],
+                    synthetic_fixture: true,
+                };
+                let imported = store.import(std::slice::from_ref(&evidence))?;
+                print(
+                    &json!({"imported":imported,"evidence_id":evidence.id,"description":description}),
+                )?;
+            } else {
+                print(&description)?;
+            }
+        }
+        Command::Mcp {
+            command,
+            tool,
+            args,
+            action,
+        } => {
+            let mut client = Mcp::connect(&command).await?;
+            match action {
+                McpAction::Initialize => print(&client.initialize().await?)?,
+                McpAction::ListTools => print(&client.list_tools().await?)?,
+                McpAction::Call => {
+                    let tool = tool.context("--tool is required for --action call")?;
+                    let args: Value = args
+                        .map(|a| serde_json::from_str(&a))
+                        .transpose()
+                        .context("--args must be a JSON object or array")?
+                        .unwrap_or_else(|| json!({}));
+                    print(&client.call_tool(&tool, args).await?)?;
+                }
+            }
+        }
         Command::Report { run_id, text } => {
             let report = store.report(&run_id)?.context("Report not found")?;
             if text {
@@ -422,6 +563,97 @@ async fn api_research(
             )
         })
 }
+#[derive(serde::Deserialize)]
+struct VisionRequest {
+    #[serde(default)]
+    prompt: Option<String>,
+    images: Vec<VisionImage>,
+}
+#[derive(serde::Deserialize)]
+struct VisionImage {
+    mime: String,
+    data_base64: String,
+}
+async fn api_vision(
+    axum::extract::State(state): axum::extract::State<App>,
+    headers: axum::http::HeaderMap,
+    axum::Json(request): axum::Json<VisionRequest>,
+) -> ApiResult {
+    auth(&headers, &state)?;
+    let Some(inference) = &state.inference else {
+        return Err(api_error(
+            axum::http::StatusCode::SERVICE_UNAVAILABLE,
+            "Vision requires a live model; this server was started offline",
+        ));
+    };
+    if request.images.is_empty() || request.images.len() > 20 {
+        return Err(api_error(
+            axum::http::StatusCode::BAD_REQUEST,
+            "Provide 1..20 images",
+        ));
+    }
+    let mut images = Vec::with_capacity(request.images.len());
+    for image in &request.images {
+        let mime = image.mime.trim().to_ascii_lowercase();
+        if !["image/png", "image/jpeg", "image/webp", "image/gif"]
+            .contains(&mime.as_str())
+        {
+            return Err(api_error(
+                axum::http::StatusCode::BAD_REQUEST,
+                "Unsupported image mime type",
+            ));
+        }
+        let bytes = match market_swarm::base64::decode(image.data_base64.trim()) {
+            Ok(bytes) if !bytes.is_empty() && bytes.len() <= 8_000_000 => bytes,
+            _ => {
+                return Err(api_error(
+                    axum::http::StatusCode::BAD_REQUEST,
+                    "Invalid or oversized base64 image data",
+                ))
+            }
+        };
+        images.push((mime, bytes));
+    }
+    let prompt = request.prompt.clone().unwrap_or_else(|| {
+        "Describe each supplied app screenshot: what it shows, all visible text, and any UX or conversion problems.".into()
+    });
+    let limits = Limits {
+        max_output_tokens: 4096,
+        ..Default::default()
+    };
+    let run = format!(
+        "vision-{}",
+        &market_swarm::digest(
+            format!(
+                "{:?}|{prompt}",
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_nanos())
+                    .unwrap_or_default()
+            )
+            .as_bytes()
+        )[..24]
+    );
+    let meta =
+        serde_json::to_string(&json!({"prompt": prompt, "images": request.images.len()}))
+            .unwrap_or_default();
+    state.store.start(&run, &meta).map_err(|_| {
+        api_error(
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            "Storage error",
+        )
+    })?;
+    match inference
+        .describe_images(&prompt, &images, &limits, &state.store, &run)
+        .await
+    {
+        Ok(description) => Ok(axum::Json(json!({"run_id": run, "description": description}))),
+        Err(_) => Err(api_error(
+            axum::http::StatusCode::BAD_REQUEST,
+            "Vision failed; inspect the persisted response for details",
+        )),
+    }
+}
 async fn serve(store: Store, inference: Option<Inference>, token: String, port: u16) -> Result<()> {
     let state = App {
         store,
@@ -436,6 +668,11 @@ async fn serve(store: Store, inference: Option<Inference>, token: String, port: 
             axum::routing::get(api_evidence).post(api_import),
         )
         .route("/research", axum::routing::post(api_research))
+        .route(
+            "/vision",
+            axum::routing::post(api_vision)
+                .layer(axum::extract::DefaultBodyLimit::max(32_000_000)),
+        )
         .route("/reports/{id}", axum::routing::get(api_report))
         .layer(axum::extract::DefaultBodyLimit::max(2_000_000))
         .with_state(state);
