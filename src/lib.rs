@@ -1,10 +1,13 @@
 pub mod analysis;
+pub mod base64;
 pub mod connectors;
 pub mod evaluation;
 pub mod inference;
+pub mod mcp;
 pub mod runtime;
 pub mod schema;
 pub mod store;
+pub mod ux;
 pub mod wtp;
 
 pub fn digest(bytes: &[u8]) -> String {

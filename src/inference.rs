@@ -16,6 +16,21 @@ pub fn select_openrouter_model(model: Option<String>) -> String {
         .unwrap_or_else(|| DEFAULT_OPENROUTER_MODEL.to_owned())
 }
 
+const VISION_SYSTEM: &str = "You are a vision/OCR analyst for app-store and product screenshots in an evidence-based research swarm. \
+You only see the supplied images; never assert content outside them. \
+Extract all visible text verbatim (OCR) and describe the visual design honestly: layout, hierarchy, colors, tone, and whether the message is clear in five seconds. \
+Mark every reaction as an observation of the image, not a claim about real users or the market. \
+Respond in Spanish. \
+Return ONLY a JSON object with exactly these fields: \
+ocr_text (string, all readable text verbatim), \
+visual_description (string), \
+first_impression (string, one short sentence), \
+clarity_0_10 (integer 0-10), \
+screenshot_kind (string, e.g. icon, onboarding, home, paywall, pricing, settings), \
+ctas (array of strings, call-to-action labels found), \
+price_mentions (array of strings, any prices or plans found), \
+issues (array of strings, visual/UX problems or ambiguities observed).";
+
 #[derive(Clone)]
 pub struct Inference {
     pub mode: String,
@@ -164,11 +179,67 @@ impl Inference {
         store: &Store,
         run: &str,
     ) -> Result<(AgentOutput, Value)> {
-        let user = serde_json::to_string(payload)?;
-        // Conservative text token allowance, also sent as a provider-enforced
-        // unit-price ceiling. Retain reservations after unknown/failed outcomes.
+        let user_content = json!(serde_json::to_string(payload)?);
         let format = output_format(self.strict_schema);
-        let input_allowance = system.len() + user.len() + serde_json::to_vec(&format)?.len() + 2048;
+        let (content, usage) = self
+            .raw_completion(system, &user_content, &format, limits, store, run)
+            .await?;
+        let output: AgentOutput = serde_json::from_str(&content)
+            .context("Inference did not match AgentOutput JSON contract")?;
+        Ok((output, usage))
+    }
+
+    /// Describe one or more images (OCR + visual analysis) with a vision model.
+    /// `images` is a list of `(mime_type, bytes)`, e.g. `("image/png", png_bytes)`.
+    pub async fn describe_images(
+        &self,
+        prompt: &str,
+        images: &[(String, Vec<u8>)],
+        limits: &Limits,
+        store: &Store,
+        run: &str,
+    ) -> Result<Value> {
+        ensure!(!images.is_empty(), "At least one image is required");
+        ensure!(images.len() <= 20, "At most 20 images per call");
+        let mut parts = vec![json!({"type":"text","text":prompt})];
+        for (mime, bytes) in images {
+            ensure!(
+                ["image/png", "image/jpeg", "image/webp", "image/gif"].contains(&mime.as_str()),
+                "Unsupported image type; use PNG, JPEG, WebP or GIF"
+            );
+            ensure!(
+                !bytes.is_empty() && bytes.len() <= 8_000_000,
+                "Image byte size out of range"
+            );
+            parts.push(json!({"type":"image_url","image_url":{
+                "url":format!("data:{mime};base64,{}", crate::base64::encode(bytes))
+            }}));
+        }
+        let format = json!({"type":"json_object"});
+        let (content, _usage) = self
+            .raw_completion(VISION_SYSTEM, &json!(parts), &format, limits, store, run)
+            .await?;
+        let out: Value =
+            serde_json::from_str(&content).context("Vision did not return a JSON object")?;
+        ensure!(out.is_object(), "Vision returned a non-object JSON value");
+        Ok(out)
+    }
+
+    async fn raw_completion(
+        &self,
+        system: &str,
+        user_content: &Value,
+        format: &Value,
+        limits: &Limits,
+        store: &Store,
+        run: &str,
+    ) -> Result<(String, Value)> {
+        // Conservative input token allowance, also sent as a provider-enforced
+        // unit-price ceiling. Retain reservations after unknown/failed outcomes.
+        let input_allowance = system.len()
+            + serde_json::to_vec(user_content)?.len()
+            + serde_json::to_vec(format)?.len()
+            + 2048;
         ensure!(
             input_allowance + limits.max_output_tokens as usize <= self.context_length,
             "Prompt exceeds conservative model context allowance; reduce evidence/context"
@@ -178,7 +249,9 @@ impl Inference {
             + self.request_rate)
             * 1.06;
         store.reserve(run, reservation, limits.max_cost_usd)?;
-        let mut body = json!({"model":self.model,"messages":[{"role":"system","content":system},{"role":"user","content":user}],
+        let mut body = json!({"model":self.model,"messages":[
+            {"role":"system","content":system},
+            {"role":"user","content":user_content}],
             "response_format":format,"max_tokens":limits.max_output_tokens,"temperature":0.2,"stream":false});
         if let Some(tokens) = limits.reasoning_max_tokens {
             body["reasoning"] = json!({"max_tokens":tokens,"exclude":true});
@@ -217,7 +290,7 @@ impl Inference {
             &json!({"response_id":value["id"],"model":value["model"],
             "usage":usage,"finish_reason":value.pointer("/choices/0/finish_reason"),
             "content":value.pointer("/choices/0/message/content"),
-            "prompt_hash":crate::digest(serde_json::to_vec(&(system,payload))?.as_slice())}),
+            "prompt_hash":crate::digest(serde_json::to_vec(&(system,user_content))?.as_slice())}),
         )?;
         if let Some(cost) = usage.get("cost").and_then(Value::as_f64) {
             ensure!(
@@ -241,10 +314,8 @@ impl Inference {
             .pointer("/choices/0/message/content")
             .and_then(Value::as_str)
             .context("Inference is missing message content")?;
-        let output: AgentOutput = serde_json::from_str(content)
-            .context("Inference did not match AgentOutput JSON contract")?;
         Ok((
-            output,
+            content.to_owned(),
             json!({"provider_usage":usage,"reserved_usd":reservation,"response_id":value["id"],"returned_model":value["model"]}),
         ))
     }

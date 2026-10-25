@@ -57,6 +57,34 @@ El último comando devuelve la ubicación de los reportes JSON y de texto. Los
 ejemplos son datos artificiales para verificar el software. Su estudio WTP debe
 seguir marcado como `inconclusive`; el modo offline no ejecuta agentes neuronales.
 
+## Auditoría UX/UI
+
+`ux audit` lee un `.pen` de pen.dev (pantallas, variables, instancias, texto y
+CTAs) y escribe un informe para cambiar el diseño. El contraste WCAG 2.x se
+calcula en Rust; un modelo no lo estima. Cada hallazgo cita la pantalla y la
+evidencia, y separa observación, inferencia y opinión de persona sintética.
+Esas personas van rotuladas: no son usuarios reales y no miden descarga ni
+disposición a pagar.
+
+```sh
+cargo run --locked -- ux audit examples/ux.meditation.pen \
+  --out output/ux --as-of 2026-10-25T00:00:00Z --category meditation
+```
+
+Eso no llama a la red. Genera `output/ux/report.json` y `report.txt` con los
+bloques hacer ahora / planificar / pulir / diferir. `--import` guarda cada
+pantalla en SQLite (`kind=simulated`, `synthetic_fixture=false`: es el archivo
+leído, no un resultado de mercado). Para comparar con fuentes ya importadas:
+
+```sh
+cargo run --locked -- fetch https://www.revenuecat.com/state-of-subscription-apps
+cargo run --locked -- ux audit diseno.pen --evidence-ids doc-... --category meditation
+```
+
+`--mode openrouter` añade un crítico y una síntesis neuronales que no sustituyen
+los ratios. Los doce módulos de investigación no cambian. El detalle, los límites
+y qué queda en Python están en [docs/UX_AUDIT.md](docs/UX_AUDIT.md).
+
 ## Los doce módulos
 
 | Área | Módulos |
@@ -93,6 +121,7 @@ no dan acceso a compras privadas de terceros.
 | Simulación social | Red de perfiles y presupuestos con influencia, rondas y semilla; escenarios neuronales cuando haya inferencia | Interacciones artificiales, no engagement real ni WTP humana |
 | Evaluación | Comparación pareada de baseline/agente/swarm: Brier, log loss, calibración, accuracy y coste | Requiere resultados reservados/posteriores; no declara superioridad por sí sola |
 | API local | Autenticación, importación, consulta, investigación y recuperación de informes | Escucha solo en loopback; sin interfaz gráfica ni despliegue externo |
+| Auditoría UX | `ux audit` sobre `.pen`: contraste WCAG, CTAs, precio, accesibilidad, benchmark citado y panel sintético etiquetado | Heurístico; no ejecuta scripts ni mide degradados; las capturas no se interpretan píxel a píxel |
 
 ## Ejecutar y comprobar
 
