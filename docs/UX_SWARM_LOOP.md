@@ -1,6 +1,14 @@
 # UX swarm loop (PickFu sintético + OCR + pen.dev)
 
-Cierra el ciclo **diseño → evidencia visual → investigación de mercado →
+La auditoría de un `.pen` ya no depende de estos scripts. El camino soportado es
+`market-swarm ux audit design.pen` (contraste WCAG medido, especialistas
+deterministas, backlog impacto/esfuerzo). Ver [UX_AUDIT.md](UX_AUDIT.md).
+Lo de abajo sigue sirviendo para **exportar PNG con el CLI de pen.dev**, pasar
+`describe` cuando hace falta un modelo de visión, y aplicar un prompt de vuelta
+al diseño. `tools/orchestrator.py` llama a `ux audit` y deja la visión y el
+swarm de mercado detrás de `--with-vision` y `--with-market-swarm`.
+
+El bucle de visión sigue cerrando **diseño → evidencia visual → investigación de mercado →
 modificación del diseño**, combinando:
 
 - **MarketSwarm** (motor multi-agente ya existente: 12 especialistas + crítico + síntesis, WTP).
@@ -21,6 +29,7 @@ flowchart LR
 
 | Comando / endpoint | Qué hace |
 |---|---|
+| `market-swarm ux audit archivo.pen` | Auditoría determinista del `.pen`: contraste WCAG, CTAs, precio, backlog. Ver [UX_AUDIT.md](UX_AUDIT.md) |
 | `market-swarm describe archivo.png [--import]` | OCR + visión de 1-20 imágenes; con `--import` guarda el resultado como `Evidence` (`vision-…`) |
 | `market-swarm mcp --command "…" --action initialize\|list-tools\|call` | Cliente MCP nativo (stdio, JSON-RPC 2.0) |
 | `POST /vision` (en `serve`) | Igual que `describe`, pero por HTTP autenticado |

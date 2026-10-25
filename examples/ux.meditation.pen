@@ -1,0 +1,166 @@
+{
+  "version": "2.21",
+  "themes": { "mode": ["light", "dark"] },
+  "variables": {
+    "color.background": {
+      "type": "color",
+      "value": [
+        { "value": "#FFFFFF", "theme": { "mode": "light" } },
+        { "value": "#12141A", "theme": { "mode": "dark" } }
+      ]
+    },
+    "color.text": {
+      "type": "color",
+      "value": [
+        { "value": "#767676", "theme": { "mode": "light" } },
+        { "value": "#5E6570", "theme": { "mode": "dark" } }
+      ]
+    },
+    "color.cta": { "type": "color", "value": "#3A3A3A" },
+    "color.oncta": { "type": "color", "value": "#6A6A6A" },
+    "font.body": { "type": "number", "value": 11 }
+  },
+  "children": [
+    {
+      "id": "btn",
+      "type": "frame",
+      "name": "Button",
+      "reusable": true,
+      "width": 36,
+      "height": 36,
+      "fill": "$color.cta",
+      "cornerRadius": 12,
+      "children": [
+        {
+          "id": "label",
+          "type": "text",
+          "content": "Submit",
+          "fill": "$color.oncta",
+          "fontSize": 16,
+          "fontWeight": "700"
+        }
+      ]
+    },
+    {
+      "id": "n1",
+      "type": "note",
+      "x": 0,
+      "y": 1200,
+      "content": "Nota interna del diseñador: no es UI"
+    },
+    {
+      "id": "onb",
+      "type": "frame",
+      "name": "Onboarding / 01 Bienvenida",
+      "x": 0,
+      "y": 0,
+      "width": 440,
+      "height": 956,
+      "fill": "$color.background",
+      "theme": { "mode": "dark" },
+      "children": [
+        {
+          "id": "h1",
+          "type": "text",
+          "name": "title",
+          "content": "Encuentra calma",
+          "fill": "$color.text",
+          "fontSize": "$font.body",
+          "fontWeight": "400"
+        },
+        {
+          "id": "go",
+          "type": "ref",
+          "ref": "btn",
+          "name": "Primary CTA",
+          "descendants": { "label": { "content": "Comenzar" } }
+        },
+        {
+          "id": "also",
+          "type": "ref",
+          "ref": "btn",
+          "name": "Secondary CTA",
+          "descendants": { "label": { "content": "Comenzar ahora" } }
+        },
+        { "id": "nav1", "type": "text", "content": "Inicio", "fill": "#F4F6FB", "fontSize": 14 },
+        { "id": "nav2", "type": "text", "content": "Práctica", "fill": "#F4F6FB", "fontSize": 14 },
+        { "id": "nav3", "type": "text", "content": "Perfil", "fill": "#F4F6FB", "fontSize": 14 }
+      ]
+    },
+    {
+      "id": "pay",
+      "type": "frame",
+      "name": "Paywall / Planes",
+      "x": 480,
+      "y": 0,
+      "width": 440,
+      "height": 956,
+      "fill": "#12141A",
+      "children": [
+        {
+          "id": "price",
+          "type": "text",
+          "content": "Plan gratuito",
+          "fill": "#F5F7FA",
+          "fontSize": 18,
+          "fontWeight": "400"
+        },
+        {
+          "id": "end",
+          "type": "text",
+          "name": "primary button",
+          "content": "Terminar sin guardar",
+          "fill": "#6B7280",
+          "fontSize": 14,
+          "fontWeight": "400"
+        },
+        { "id": "nav1b", "type": "text", "content": "Inicio", "fill": "#F4F6FB", "fontSize": 14 },
+        { "id": "nav2b", "type": "text", "content": "Práctica", "fill": "#F4F6FB", "fontSize": 14 },
+        { "id": "nav3b", "type": "text", "content": "Perfil", "fill": "#F4F6FB", "fontSize": 14 }
+      ]
+    },
+    {
+      "id": "home",
+      "type": "frame",
+      "name": "Inicio",
+      "x": 960,
+      "y": 0,
+      "width": 440,
+      "height": 956,
+      "fill": "#FFFFFF",
+      "placeholder": true,
+      "children": [
+        {
+          "id": "body",
+          "type": "text",
+          "content": "Tu práctica de hoy",
+          "fill": "#111111",
+          "fontSize": 20,
+          "fontWeight": "400"
+        },
+        {
+          "id": "iconbtn",
+          "type": "frame",
+          "name": "Icon button",
+          "width": 24,
+          "height": 24,
+          "fill": "#5B4DFF",
+          "children": [
+            {
+              "id": "ic",
+              "type": "icon",
+              "library": "lucide",
+              "icon": "play",
+              "width": 24,
+              "height": 24,
+              "fill": "#FFFFFF"
+            }
+          ]
+        },
+        { "id": "nav1c", "type": "text", "content": "Inicio", "fill": "#111111", "fontSize": 14 },
+        { "id": "nav2c", "type": "text", "content": "Práctica", "fill": "#111111", "fontSize": 14 },
+        { "id": "nav3c", "type": "text", "content": "Perfil", "fill": "#111111", "fontSize": 14 }
+      ]
+    }
+  ]
+}

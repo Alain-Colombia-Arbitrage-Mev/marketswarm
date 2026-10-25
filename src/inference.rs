@@ -219,8 +219,8 @@ impl Inference {
         let (content, _usage) = self
             .raw_completion(VISION_SYSTEM, &json!(parts), &format, limits, store, run)
             .await?;
-        let out: Value = serde_json::from_str(&content)
-            .context("Vision did not return a JSON object")?;
+        let out: Value =
+            serde_json::from_str(&content).context("Vision did not return a JSON object")?;
         ensure!(out.is_object(), "Vision returned a non-object JSON value");
         Ok(out)
     }

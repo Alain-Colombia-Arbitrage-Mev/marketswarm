@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Extract frames from a .pen file into a standalone .pen.
 
+Prefer `market-swarm ux audit design.pen` to analyze a design. This script only
+splits frames so the pen.dev CLI can export one screen to PNG.
+
 pen.dev `.pen` files are JSON. A large "product map" can hold hundreds of
 screens as top-level `children`. This isolates one or more screens (by exact id
 or name substring) into their own .pen so the UX swarm loop tests a single

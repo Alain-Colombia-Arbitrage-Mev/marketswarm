@@ -37,7 +37,10 @@ impl Mcp {
             .spawn()
             .context("Failed to spawn MCP server command")?;
         let stdin = child.stdin.take().context("MCP server stdin unavailable")?;
-        let stdout = child.stdout.take().context("MCP server stdout unavailable")?;
+        let stdout = child
+            .stdout
+            .take()
+            .context("MCP server stdout unavailable")?;
         Ok(Self {
             child,
             stdin,
@@ -49,18 +52,16 @@ impl Mcp {
     async fn send(&mut self, payload: &Value) -> Result<()> {
         let mut line = serde_json::to_vec(payload)?;
         line.push(b'\n');
-        self.stdin.write_all(&line).await.context("MCP write failed")?;
+        self.stdin
+            .write_all(&line)
+            .await
+            .context("MCP write failed")?;
         self.stdin.flush().await.context("MCP flush failed")?;
         Ok(())
     }
 
     async fn receive(&mut self, id: u64) -> Result<Value> {
-        while let Some(line) = self
-            .lines
-            .next_line()
-            .await
-            .context("MCP read failed")?
-        {
+        while let Some(line) = self.lines.next_line().await.context("MCP read failed")? {
             let msg: Value =
                 serde_json::from_str(&line).context("MCP sent an invalid JSON line")?;
             if msg.get("id").and_then(Value::as_u64) == Some(id) {
@@ -111,7 +112,8 @@ impl Mcp {
     }
 
     pub async fn call_tool(&mut self, name: &str, args: Value) -> Result<Value> {
-        self.request("tools/call", json!({"name": name, "arguments": args})).await
+        self.request("tools/call", json!({"name": name, "arguments": args}))
+            .await
     }
 }
 

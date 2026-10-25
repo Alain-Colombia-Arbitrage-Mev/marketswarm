@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
-"""UX swarm loop: pen.dev/Figma -> vision+OCR -> market-swarm -> modifications.
+"""UX loop: pen.dev design -> `ux audit` -> optional vision -> optional market swarm -> pen prompt.
 
-This is the thin orchestrator (part "A") that reuses the native capabilities
-added to `market-swarm` (part "B"):
+The supported analysis is `market-swarm ux audit` (deterministic contrast, cited
+findings, impact/effort backlog). This script only drives the pen.dev CLI or an
+MCP server around that command.
 
-  1. capture screenshots   pen CLI export  OR  MCP (Figma / pen.dev live)
-  2. `market-swarm describe`   vision + OCR of the screenshots (VL model)
-  3. `market-swarm run`        12-specialist swarm (WTP, download intent)
-  4. apply variant          pen CLI modify  OR  MCP write tool
+  1. `market-swarm ux audit` on the .pen file (default, offline)
+  2. optional screenshots + `describe`   (--with-vision)
+  3. optional 12-module market `run`     (--with-market-swarm)
+  4. apply the audit backlog as a pen prompt, or an MCP write tool
 
-The loop: capture -> describe (evidence) -> research (report) -> apply.
+The market-research swarm is not the UX audit. Synthetic persona lines in the
+audit are not real users.
 
 Two backends:
 
@@ -153,6 +155,32 @@ def run_swarm(binary: str, db: str, request: dict, mode: str, out_dir: str) -> d
         os.unlink(path)
 
 
+def audit_recommendations(report: dict) -> str:
+    lines = []
+    synthesis = (report.get("synthesis") or {}).get("output") or {}
+    if synthesis.get("summary"):
+        lines.append(synthesis["summary"])
+    for item in report.get("backlog") or []:
+        if item.get("band") not in {"do_now", "plan"}:
+            continue
+        screen = item.get("screen_name") or "archivo"
+        lines.append(
+            f"- [{item.get('band')}] {screen}: {item.get('statement', '')} "
+            f"Cambio: {item.get('recommendation', '')}"
+        )
+    return "\n".join(lines).strip()
+
+
+def ux_audit(binary: str, db: str, design: str, question: str, mode: str,
+             out_dir: str, as_of: str) -> dict:
+    os.makedirs(out_dir, exist_ok=True)
+    argv = [
+        binary, "--db", db, "ux", "audit", design,
+        "--out", out_dir, "--as-of", as_of, "--question", question, "--mode", mode,
+    ]
+    return json.loads(run_cmd(argv).stdout)
+
+
 def synthesize_recommendations(report: dict) -> str:
     synthesis = report.get("synthesis", {}) or {}
     output = synthesis.get("output") or {}
@@ -180,7 +208,15 @@ def main() -> int:
         "MARKETSWARM_BIN", "./target/debug/market-swarm"))
     parser.add_argument("--db", default="state/swarm.sqlite")
     parser.add_argument("--mode", default="openrouter",
-                        choices=["openrouter", "local", "offline"])
+                        choices=["openrouter", "local", "offline"],
+                        help="mode for optional vision and market-swarm steps")
+    parser.add_argument("--audit-mode", default="offline",
+                        choices=["openrouter", "local", "offline"],
+                        help="mode for ux audit; offline needs no API key")
+    parser.add_argument("--with-vision", action="store_true",
+                        help="also export a screenshot and run describe")
+    parser.add_argument("--with-market-swarm", action="store_true",
+                        help="also run the 12-module market research request")
     parser.add_argument("--prompt", default=DEFAULT_PROMPT)
     parser.add_argument("--question", required=True)
     parser.add_argument("--app-name", default="app")
@@ -202,58 +238,76 @@ def main() -> int:
 
     for iteration in range(1, args.iterations + 1):
         print(f"\n=== iteration {iteration}/{args.iterations} ===")
+        evidence_id = ""
 
-        # 1) capture screenshots
-        print(f"[1/4] capture (backend={args.backend})")
-        if args.backend == "pen":
-            out_png = os.path.join(args.out_dir, f"screenshot-{iteration}.png")
+        if design:
+            print(f"[1/4] ux audit ({args.audit_mode})")
             if args.dry_run:
-                images = [out_png]
-                print(f"  (dry-run) {args.pen} --in {design} --export {out_png} "
-                      f"--export-scale {args.export_scale}")
+                print(f"  (dry-run) {args.binary} --db {args.db} ux audit {design} "
+                      f"--out {args.out_dir} --as-of {as_of} --mode {args.audit_mode} "
+                      f"--question {args.question!r}")
             else:
-                images = pen_capture(args.pen, design, out_png, args.export_scale)
+                report = ux_audit(args.binary, args.db, design, args.question,
+                                  args.audit_mode, args.out_dir, as_of)
+                recommendations = audit_recommendations(report)
+                print(f"  status={report.get('status')} "
+                      f"screens={((report.get('stats') or {}).get('screens'))}")
         else:
-            screenshot_args = json.loads(args.screenshot_args)
+            print("[1/4] ux audit skipped (no .pen path; pass --design)")
+
+        if args.with_vision:
+            print(f"[2/4] capture + describe (backend={args.backend})")
+            if args.backend == "pen":
+                out_png = os.path.join(args.out_dir, f"screenshot-{iteration}.png")
+                if args.dry_run:
+                    images = [out_png]
+                    print(f"  (dry-run) {args.pen} --in {design} --export {out_png} "
+                          f"--export-scale {args.export_scale}")
+                else:
+                    images = pen_capture(args.pen, design, out_png, args.export_scale)
+            else:
+                screenshot_args = json.loads(args.screenshot_args)
+                if args.dry_run:
+                    images = [os.path.join(args.out_dir, "screenshot-0.png")]
+                    print(f"  (dry-run) mcp call {args.screenshot_tool} "
+                          f"{json.dumps(screenshot_args)}")
+                else:
+                    shot = mcp_call(args.binary, args.mcp_command,
+                                    args.screenshot_tool, screenshot_args)
+                    images = extract_images(shot, args.out_dir)
             if args.dry_run:
-                images = [os.path.join(args.out_dir, "screenshot-0.png")]
-                print(f"  (dry-run) mcp call {args.screenshot_tool} "
-                      f"{json.dumps(screenshot_args)}")
+                evidence_id = "vision-<dry-run>"
+                print(f"  (dry-run) describe {images}")
             else:
-                shot = mcp_call(args.binary, args.mcp_command,
-                                args.screenshot_tool, screenshot_args)
-                images = extract_images(shot, args.out_dir)
-
-        # 2) vision + OCR, imported as evidence
-        print(f"[2/4] vision + OCR via 'describe' ({len(images)} images)")
-        if args.dry_run:
-            evidence_id = "vision-<dry-run>"
+                desc = describe(args.binary, args.db, images, args.prompt, args.mode)
+                evidence_id = desc.get("evidence_id", "")
+                print(f"  evidence_id={evidence_id} "
+                      f"clarity={desc.get('description', {}).get('clarity_0_10')}")
         else:
-            desc = describe(args.binary, args.db, images, args.prompt, args.mode)
-            evidence_id = desc.get("evidence_id", "")
-            clarity = desc.get("description", {}).get("clarity_0_10")
-            print(f"  evidence_id={evidence_id} clarity={clarity}")
+            print("[2/4] vision skipped (pass --with-vision to OCR screenshots)")
 
-        # 3) swarm research
-        print(f"[3/4] swarm research ({','.join(UX_MODULES)})")
-        context = {
-            "app": args.app_name,
-            "currency": args.currency,
-            "billing_period": args.billing_period,
-            "price_cents": args.price_cents,
-            "audience": args.audience,
-            "visual_evidence_id": evidence_id,
-        }
-        request = build_request(args.question, [evidence_id], context, as_of)
-        if args.dry_run:
-            print("  (dry-run) request:", json.dumps(request, indent=2)[:400])
+        if args.with_market_swarm:
+            print(f"[3/4] market swarm ({','.join(UX_MODULES)})")
+            if not evidence_id:
+                print("  skipped: market swarm needs vision evidence; pass --with-vision")
+            else:
+                context = {
+                    "app": args.app_name,
+                    "currency": args.currency,
+                    "billing_period": args.billing_period,
+                    "price_cents": args.price_cents,
+                    "audience": args.audience,
+                    "visual_evidence_id": evidence_id,
+                }
+                request = build_request(args.question, [evidence_id], context, as_of)
+                if args.dry_run:
+                    print("  (dry-run) request:", json.dumps(request, indent=2)[:400])
+                else:
+                    market = run_swarm(args.binary, args.db, request, args.mode, args.out_dir)
+                    print(f"  run_id={market.get('run_id')} status={market.get('status')}")
         else:
-            report = run_swarm(args.binary, args.db, request, args.mode, args.out_dir)
-            recommendations = synthesize_recommendations(report)
-            print(f"  run_id={report.get('run_id')} status={report.get('status')}")
-            print(f"  report_json={report.get('report_json')}")
+            print("[3/4] market swarm skipped (pass --with-market-swarm)")
 
-        # 4) apply the recommended variant
         if args.backend == "pen":
             print("[4/4] apply via pen CLI")
             stem = os.path.splitext(design)[0]

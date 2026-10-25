@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{Args, Parser, Subcommand, ValueEnum};
 use market_swarm::{
     connectors, evaluation,
     inference::{select_openrouter_model, Inference},
@@ -7,6 +7,7 @@ use market_swarm::{
     runtime,
     schema::{Evidence, EvidenceKind, Limits, Module, ResearchRequest},
     store::Store,
+    ux::{self, AuditOptions, Screenshot},
 };
 use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
@@ -39,6 +40,40 @@ enum McpAction {
     Initialize,
     ListTools,
     Call,
+}
+#[derive(Subcommand)]
+enum UxCommand {
+    /// List the deterministic UX/UI specialists.
+    Specialists,
+    /// Audit a pen.dev .pen file into a prioritized, cited UX report.
+    Audit(Box<UxAuditArgs>),
+}
+
+#[derive(Args, Debug)]
+struct UxAuditArgs {
+    file: PathBuf,
+    #[arg(long)]
+    out: Option<PathBuf>,
+    #[arg(long)]
+    import: bool,
+    #[arg(long)]
+    category: Option<String>,
+    #[arg(long)]
+    question: Option<String>,
+    #[arg(long)]
+    as_of: Option<String>,
+    /// Comma-separated evidence ids already in the store. Cited competitive sources only.
+    #[arg(long, value_delimiter = ',')]
+    evidence_ids: Vec<String>,
+    /// Directory of PNG/JPEG/WebP/GIF exports. Linked by screen id or name, not interpreted by a model.
+    #[arg(long)]
+    screenshots: Option<PathBuf>,
+    #[arg(long, value_enum, default_value = "offline")]
+    mode: Mode,
+    #[arg(long, env = "OPENROUTER_MODEL")]
+    model: Option<String>,
+    #[arg(long, default_value = "http://127.0.0.1:11434/v1/chat/completions")]
+    local_url: String,
 }
 #[derive(Subcommand)]
 enum Command {
@@ -100,9 +135,16 @@ enum Command {
         #[arg(long, default_value = "output")]
         output: PathBuf,
     },
+    Ux {
+        #[command(subcommand)]
+        command: UxCommand,
+    },
     Describe {
         files: Vec<PathBuf>,
-        #[arg(long, default_value = "Describe each supplied app screenshot: what it shows, all visible text, and any UX or conversion problems.")]
+        #[arg(
+            long,
+            default_value = "Describe each supplied app screenshot: what it shows, all visible text, and any UX or conversion problems."
+        )]
         prompt: String,
         #[arg(long, value_enum, default_value = "openrouter")]
         mode: Mode,
@@ -207,6 +249,7 @@ async fn execute() -> Result<()> {
             .collect::<std::collections::BTreeMap<_, _>>();
             print(
                 &json!({"rust_runtime":true,"mirofish_dependency":false,"db_ready":true,"modules":Module::ALL,
+                "ux_audit":"ux audit <file.pen>",
                 "credentials":credentials,
                 "openrouter_model_configured":std::env::var("OPENROUTER_MODEL").ok().is_some_and(|s|!s.trim().is_empty()),
                 "effective_openrouter_model":select_openrouter_model(std::env::var("OPENROUTER_MODEL").ok()),
@@ -427,6 +470,102 @@ async fn execute() -> Result<()> {
                 }
             }
         }
+        Command::Ux { command } => match command {
+            UxCommand::Specialists => print(&ux::specialist_catalog())?,
+            UxCommand::Audit(args) => {
+                let UxAuditArgs {
+                    file,
+                    out,
+                    import,
+                    category,
+                    question,
+                    as_of,
+                    evidence_ids,
+                    screenshots,
+                    mode,
+                    model,
+                    local_url,
+                } = *args;
+                let bytes = std::fs::read(&file)
+                    .with_context(|| format!("Cannot read pen file: {}", file.display()))?;
+                anyhow::ensure!(bytes.len() <= 64_000_000, "pen file exceeds 64 MB");
+                let as_of = match as_of {
+                    Some(value) => chrono::DateTime::parse_from_rfc3339(&value)
+                        .context("--as-of must be RFC3339")?
+                        .with_timezone(&chrono::Utc),
+                    None => chrono::Utc::now(),
+                };
+                let evidence_ids: Vec<String> = evidence_ids
+                    .into_iter()
+                    .map(|id| id.trim().to_owned())
+                    .filter(|id| !id.is_empty())
+                    .collect();
+                let competitive = if evidence_ids.is_empty() {
+                    Vec::new()
+                } else {
+                    store.evidence(&evidence_ids)?
+                };
+                let mut shots = Vec::new();
+                if let Some(dir) = screenshots {
+                    for entry in std::fs::read_dir(&dir)
+                        .with_context(|| format!("Cannot read screenshots: {}", dir.display()))?
+                    {
+                        let path = entry?.path();
+                        if !path.is_file() {
+                            continue;
+                        }
+                        let ext = path
+                            .extension()
+                            .and_then(|e| e.to_str())
+                            .unwrap_or("")
+                            .to_ascii_lowercase();
+                        if !["png", "jpg", "jpeg", "webp", "gif"].contains(&ext.as_str()) {
+                            continue;
+                        }
+                        let bytes = std::fs::read(&path)?;
+                        shots.push(Screenshot {
+                            path: path.display().to_string(),
+                            bytes,
+                        });
+                    }
+                }
+                let provider = if matches!(mode, Mode::Offline) {
+                    None
+                } else {
+                    Some(
+                        inference(mode, model, &local_url, 180)
+                            .await?
+                            .context("UX neural pass requires a live model")?,
+                    )
+                };
+                let mut report = ux::audit(
+                    &bytes,
+                    &AuditOptions {
+                        source_name: file.display().to_string(),
+                        category,
+                        question: question.unwrap_or_else(|| {
+                            "¿Qué cambios de UX/UI conviene hacer primero en este diseño?".into()
+                        }),
+                        as_of,
+                        competitive,
+                        screenshots: shots,
+                    },
+                )?;
+                if let Some(provider) = provider {
+                    ux::enrich(&mut report, &provider, &store).await?;
+                }
+                if import {
+                    let imported = store.import(&report.evidence)?;
+                    report.imported = Some(imported);
+                }
+                if let Some(dir) = out {
+                    std::fs::create_dir_all(&dir)?;
+                    std::fs::write(dir.join("report.json"), serde_json::to_vec_pretty(&report)?)?;
+                    std::fs::write(dir.join("report.txt"), ux::render(&report))?;
+                }
+                print(&report)?;
+            }
+        },
         Command::Report { run_id, text } => {
             let report = store.report(&run_id)?.context("Report not found")?;
             if text {
@@ -574,6 +713,53 @@ struct VisionImage {
     mime: String,
     data_base64: String,
 }
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct UxAuditRequest {
+    pen: Value,
+    #[serde(default)]
+    category: Option<String>,
+    #[serde(default)]
+    question: Option<String>,
+    #[serde(default)]
+    as_of: Option<chrono::DateTime<chrono::Utc>>,
+    #[serde(default)]
+    evidence: Vec<Evidence>,
+}
+async fn api_ux_audit(
+    axum::extract::State(state): axum::extract::State<App>,
+    headers: axum::http::HeaderMap,
+    axum::Json(request): axum::Json<UxAuditRequest>,
+) -> ApiResult {
+    auth(&headers, &state)?;
+    let bytes = serde_json::to_vec(&request.pen).map_err(|_| {
+        api_error(
+            axum::http::StatusCode::BAD_REQUEST,
+            "UX audit document is not JSON",
+        )
+    })?;
+    let question = request
+        .question
+        .unwrap_or_else(|| "¿Qué cambios de UX/UI conviene hacer primero en este diseño?".into());
+    let as_of = request.as_of.unwrap_or_else(chrono::Utc::now);
+    match ux::audit(
+        &bytes,
+        &AuditOptions {
+            source_name: "request:/ux/audit".into(),
+            category: request.category,
+            question,
+            as_of,
+            competitive: request.evidence,
+            screenshots: Vec::new(),
+        },
+    ) {
+        Ok(report) => Ok(axum::Json(json!(report))),
+        Err(_) => Err(api_error(
+            axum::http::StatusCode::BAD_REQUEST,
+            "UX audit failed validation",
+        )),
+    }
+}
 async fn api_vision(
     axum::extract::State(state): axum::extract::State<App>,
     headers: axum::http::HeaderMap,
@@ -595,9 +781,7 @@ async fn api_vision(
     let mut images = Vec::with_capacity(request.images.len());
     for image in &request.images {
         let mime = image.mime.trim().to_ascii_lowercase();
-        if !["image/png", "image/jpeg", "image/webp", "image/gif"]
-            .contains(&mime.as_str())
-        {
+        if !["image/png", "image/jpeg", "image/webp", "image/gif"].contains(&mime.as_str()) {
             return Err(api_error(
                 axum::http::StatusCode::BAD_REQUEST,
                 "Unsupported image mime type",
@@ -634,9 +818,8 @@ async fn api_vision(
             .as_bytes()
         )[..24]
     );
-    let meta =
-        serde_json::to_string(&json!({"prompt": prompt, "images": request.images.len()}))
-            .unwrap_or_default();
+    let meta = serde_json::to_string(&json!({"prompt": prompt, "images": request.images.len()}))
+        .unwrap_or_default();
     state.store.start(&run, &meta).map_err(|_| {
         api_error(
             axum::http::StatusCode::INTERNAL_SERVER_ERROR,
@@ -647,7 +830,9 @@ async fn api_vision(
         .describe_images(&prompt, &images, &limits, &state.store, &run)
         .await
     {
-        Ok(description) => Ok(axum::Json(json!({"run_id": run, "description": description}))),
+        Ok(description) => Ok(axum::Json(
+            json!({"run_id": run, "description": description}),
+        )),
         Err(_) => Err(api_error(
             axum::http::StatusCode::BAD_REQUEST,
             "Vision failed; inspect the persisted response for details",
@@ -668,10 +853,10 @@ async fn serve(store: Store, inference: Option<Inference>, token: String, port: 
             axum::routing::get(api_evidence).post(api_import),
         )
         .route("/research", axum::routing::post(api_research))
+        .route("/ux/audit", axum::routing::post(api_ux_audit))
         .route(
             "/vision",
-            axum::routing::post(api_vision)
-                .layer(axum::extract::DefaultBodyLimit::max(32_000_000)),
+            axum::routing::post(api_vision).layer(axum::extract::DefaultBodyLimit::max(32_000_000)),
         )
         .route("/reports/{id}", axum::routing::get(api_report))
         .layer(axum::extract::DefaultBodyLimit::max(2_000_000))
